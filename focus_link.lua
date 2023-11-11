@@ -47,3 +47,27 @@ function getCommandDefault()
         return default_state
     end
 end
+
+menu.action(misc, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
+    local focusLink, commandLink
+    if (cmd := getFocusedCommand()) then
+        focusLink = "["..getPathFromRef(cmd, "en", ">", false).."]("..urlEncode("https://stand.gg/focus#" .. getPathFromRef(cmd, "en", ">", false))..")"
+    end
+    if (cmd := getCommandFromRef()) then
+        if getCommandDefault() then
+            commandLink = "[U > " .. getCommandFromRef():gsub("%%20", " ") .. " > Enter](https://stand.gg/commandbox#" .. getCommandFromRef() .. ")\nDefault: [U > " .. getCommandFromRef(true):gsub("%%20", " ") .. " > Enter](https://stand.gg/commandbox#" .. getCommandFromRef(true)..")"
+        else
+            commandLink = "[U > " .. getCommandFromRef():gsub("%%20", " ") .. " > Enter](https://stand.gg/commandbox#" .. getCommandFromRef() .. ")"
+        end
+    end
+
+    if focusLink and commandLink then
+        util.copy_to_clipboard("Focus Link: " .. focusLink .. "\n\nCommand Link: " .. commandLink)
+    elseif focusLink then
+        util.copy_to_clipboard("Focus Link: " .. focusLink)
+    elseif commandLink then
+        util.copy_to_clipboard("Command Link: " .. commandLink)
+    else
+        notify("You are not focusing any command. :/")
+    end
+end)
