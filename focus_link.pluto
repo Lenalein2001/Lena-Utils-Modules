@@ -1,14 +1,14 @@
 function urlEncode(input)
-	local output = input:gsub(">", "%%3E"):gsub("%s", "%%20")
-	return output
+    local output = input:gsub(">", "%%3E"):gsub("%s", "%%20")
+    return output
 end
 
 function getFocusedCommand()
-	for menu.get_current_ui_list():getChildren() as cmd do
-		if cmd:isFocused() then
+    for menu.get_current_ui_list():getChildren() as cmd do
+        if cmd:isFocused() then
             return cmd
         end
-	end
+    end
 end
 
 local tab_root = menu.ref_by_path("Self"):getParent()
@@ -16,15 +16,15 @@ local version_info = menu.get_version()
 local root_name_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Root Name")
 local address_separator_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Address Separator")
 
-function getPathFromRef(ref, lang_code, override_separator, include_root_name = true)
+function getPathFromRef(ref, lang_code, override_separator, include_root_name)
     local path = ""
-    local separator = override_separator ?? address_separator_ref:getState():gsub(version_info.brand, ""):gsub("Online", "")
+    local separator = override_separator or address_separator_ref:getState():gsub(version_info.brand, ""):gsub("Online", "")
     local cmd = ref
     while cmd:isValid() and (include_root_name or not cmd:equals(tab_root)) do
-        local name = cmd:equals(tab_root) ? (root_name_ref.value != 0 ? (root_name_ref:getState():gsub("{}", version_info.version)) : "") : cmd.menu_name
+        local name = cmd:equals(tab_root) and (root_name_ref.value ~= 0 and root_name_ref:getState():gsub("{}", version_info.version) or "") or cmd.menu_name
         local hash = tonumber(name)
         if hash then
-            name = lang.get_string(hash, lang_code ?? lang.get_current())
+            name = lang.get_string(hash, lang_code or lang.get_current())
         end
         if #name > 0 then
             path = name .. separator .. path
@@ -38,56 +38,75 @@ function getPathFromRef(ref, lang_code, override_separator, include_root_name = 
 end
 
 function getCommandFromRef(default)
-    for menu.get_command_names(getFocusedCommand()) as input do
-        local state = getFocusedCommand():getState()
-        local type = menu.get_type(getFocusedCommand())
-        switch type do
-            case COMMAND_LIST_SEARCH:
-                input = input.." [clue]"
-                break
-            case COMMAND_ACTION:
-                input = input.." ".. state
-                break
-            default:
-                if default then
-                    input = input.." ".. getFocusedCommand():getDefaultState()
-                else
-                    input = input.." ".. state
-                end
-        end
+    local cmd = getFocusedCommand()
+    if cmd then
+        for menu.get_command_names(cmd) as input do
+            local state = cmd:getState()
+            local defaultstate = cmd:getDefaultState()
 
-        local output = input:gsub("%s", "%%20")
-        return tostring(output)
+            switch menu.get_type(cmd) do
+                case COMMAND_LIST_SEARCH:
+                    input = input .. " [clue]"
+                    break
+                case COMMAND_ACTION:
+                    input = input .. " " .. state
+                    break
+                default:
+                    if default then
+                        input = input .. " " .. defaultstate
+                    else
+                        input = input .. " " .. state
+                    end
+            end
+            return tostring(input)
+        end
     end
 end
 
 function getCommandDefault()
-    local state = getFocusedCommand():getState()
-    local default_state = getFocusedCommand():getDefaultState()
-    if state != default_state then
-        return default_state
+    local cmd = getFocusedCommand()
+    if cmd then
+        local state = cmd:getState()
+        local default_state = cmd:getDefaultState()
+        if state != default_state then
+            return default_state
+        end
     end
 end
 
-menu.action(menu.ref_by_command_name("lenamisc"), "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
-    local focusLink, commandLink
-    if (cmd := getFocusedCommand()) then
-        focusLink = "["..getPathFromRef(cmd, "en", ">", false).."]("..urlEncode("https://stand.gg/focus#" .. getPathFromRef(cmd, "en", ">", false))..")"
-    end
-    if (cmd := getCommandFromRef()) then
-        if getCommandDefault() then
-            commandLink = "[U > " .. getCommandFromRef():gsub("%%20", " ") .. " > Enter](https://stand.gg/commandbox#" .. getCommandFromRef() .. ")\nDefault: [U > " .. getCommandFromRef(true):gsub("%%20", " ") .. " > Enter](https://stand.gg/commandbox#" .. getCommandFromRef(true)..")"
-        else
-            commandLink = "[U > " .. getCommandFromRef():gsub("%%20", " ") .. " > Enter](https://stand.gg/commandbox#" .. string.rstrip(getCommandFromRef(), " [clue]") .. ")"
-        end
+function copyToClipboardWithHelpText(focusLink, commandLink, helpText)
+    local clipboardText = "- Focus Link: " .. focusLink
+
+    if commandLink and commandLink ~= "" then
+        clipboardText = clipboardText .. "\n\n- Command Link: " .. commandLink
     end
 
-    if focusLink and commandLink then
-        util.copy_to_clipboard("Focus Link: " .. focusLink .. "\n\nCommand Link: " .. commandLink)
-    elseif focusLink then
-        util.copy_to_clipboard("Focus Link: " .. focusLink)
-    elseif commandLink then
-        util.copy_to_clipboard("Command Link: " .. commandLink)
+    if helpText and helpText ~= "" then
+        clipboardText = clipboardText .. "\n\n- Help Text:\n" .. helpText
+    end
+
+    util.copy_to_clipboard(clipboardText)
+end
+
+menu.action(menu.ref_by_command_name("lenamisc"), "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
+    local focusLink, commandLink, helpText
+    local cmd = getFocusedCommand()
+    if cmd then
+        local encodedPath = urlEncode(getPathFromRef(cmd, "en", ">", false))
+        focusLink = "[" .. getPathFromRef(cmd, "en", ">", false) .. "](https://stand.gg/focus#" .. encodedPath .. ")"
+        helpText = lang.get_string(menu.get_help_text(cmd))
+    end
+    if focusLink then
+        local command = getCommandFromRef()
+        local defaultCommand = getCommandDefault()
+        if command and defaultCommand then
+            local encodedCommand = urlEncode(command)
+            local encodedDefaultCommand = urlEncode(defaultCommand)
+            commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter](https://stand.gg/commandbox#" .. encodedCommand .. ")\n - Default: [U > " .. defaultCommand:gsub("%%20", " ") .. " > Enter](https://stand.gg/commandbox#" .. encodedDefaultCommand .. ")"
+        elseif command then
+            commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter] (not in default state)"
+        end
+        copyToClipboardWithHelpText(focusLink, commandLink, helpText)
     else
         notify("You are not focusing any command. :/")
     end
