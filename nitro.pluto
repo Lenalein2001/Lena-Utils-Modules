@@ -1,0 +1,61 @@
+util.require_natives("1663599433")
+local max_int = 2147483647
+
+function streamPtfx(lib)
+    if not STREAMING.HAS_NAMED_PTFX_ASSET_LOADED(lib) then
+        STREAMING.REQUEST_NAMED_PTFX_ASSET(lib)
+        GRAPHICS.USE_PARTICLE_FX_ASSET(lib)
+        util.yield(500)
+        while not STREAMING.HAS_NAMED_PTFX_ASSET_LOADED(lib) do
+            util.yield(0)
+        end
+    end
+end
+
+function Timemulti(secs, mins)
+    secs = secs * 1000
+    mins = mins * 60 * 1000
+    local time = secs + mins
+    return time
+end
+
+function activateNitrous(vehicle, speed, duration)
+    local start = util.current_time_millis()
+    VEHICLE.SET_OVERRIDE_NITROUS_LEVEL(vehicle, true, duration, speed, max_int, false)
+    while util.current_time_millis() < start + duration do
+        util.yield(10)
+        if PAD.IS_CONTROL_JUST_PRESSED(0, 357) then
+            VEHICLE.SET_OVERRIDE_NITROUS_LEVEL(vehicle, false, duration, speed, max_int, false)
+            break
+        end
+    end
+    VEHICLE.SET_OVERRIDE_NITROUS_LEVEL(vehicle, false, 0, speed, max_int, false)
+    util.yield_once()
+end
+
+local nitro = {speed = 10, dursecs = 3, durmin = 0}
+
+local nitroMenu = menu.list(menu.my_root(), 'Nitrous', {}, 'Add Nitrous to your vehicle with the speed and duration')
+
+nitroMenu:toggle_loop('Nitrous', {'nitro'}, 'Add Nitrous to your vehicle with the speed and duration', function ()
+    local curcar = entities.get_user_vehicle_as_handle()
+    nitro.duration = Timemulti(nitro.dursecs, nitro.durmin)
+    streamPtfx('veh_xs_vehicle_mods')
+    if PAD.IS_CONTROL_JUST_PRESSED(0, 357) then
+        activateNitrous(curcar, nitro.speed, nitro.duration)
+    end
+end)
+
+nitroMenu:slider('Boost Speed', {}, 'Adjust the Speed of the Nitrous Boost', 1, 100, 10, 1, function(s)
+    nitro.speed = s / 10
+end)
+
+nitroMenu:slider('Duration in Seconds', {}, 'Adjust the Speed of the Nitrous Boost', 0, 60, 30, 1, function(s)
+    nitro.dursecs = s
+end)
+
+nitroMenu:slider('Duration in Minutes', {}, 'Adjust the Speed of the Nitrous Boost', 0, 10, 0, 1, function(s)
+    nitro.durmin = s
+end)
+
+util.keep_running()
