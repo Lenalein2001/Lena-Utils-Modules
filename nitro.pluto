@@ -1,7 +1,6 @@
-util.require_natives("1663599433")
 local max_int = 2147483647
 
-function streamPtfx(lib)
+local function streamPtfx(lib)
     if not STREAMING.HAS_NAMED_PTFX_ASSET_LOADED(lib) then
         STREAMING.REQUEST_NAMED_PTFX_ASSET(lib)
         GRAPHICS.USE_PARTICLE_FX_ASSET(lib)
@@ -12,14 +11,14 @@ function streamPtfx(lib)
     end
 end
 
-function Timemulti(secs, mins)
+local function Timemulti(secs, mins)
     secs = secs * 1000
     mins = mins * 60 * 1000
     local time = secs + mins
     return time
 end
 
-function activateNitrous(vehicle, speed, duration)
+local function activateNitrous(vehicle, speed, duration)
     local start = util.current_time_millis()
     VEHICLE.SET_OVERRIDE_NITROUS_LEVEL(vehicle, true, duration, speed, max_int, false)
     while util.current_time_millis() < start + duration do
@@ -35,7 +34,7 @@ end
 
 local nitro = {speed = 10, dursecs = 3, durmin = 0}
 
-local nitroMenu = menu.list(menu.my_root(), 'Nitrous', {}, 'Add Nitrous to your vehicle with the speed and duration')
+local nitroMenu = menu.list(menu.ref_by_command_name("lenavehicle"), 'Nitrous', {}, 'Add Nitrous to your vehicle with the speed and duration.')
 
 nitroMenu:toggle_loop('Nitrous', {'nitro'}, 'Add Nitrous to your vehicle with the speed and duration', function ()
     local curcar = entities.get_user_vehicle_as_handle()
@@ -46,15 +45,15 @@ nitroMenu:toggle_loop('Nitrous', {'nitro'}, 'Add Nitrous to your vehicle with th
     end
 end)
 
-nitroMenu:slider('Boost Speed', {}, 'Adjust the Speed of the Nitrous Boost', 1, 100, 10, 1, function(s)
+nitroMenu:slider('Boost Speed', {}, 'Adjust the Speed of the Nitrous Boost.', 1, 100, 10, 1, function(s)
     nitro.speed = s / 10
 end)
 
-nitroMenu:slider('Duration in Seconds', {}, 'Adjust the Speed of the Nitrous Boost', 0, 60, 30, 1, function(s)
+nitroMenu:slider('Duration in Seconds', {}, 'Adjust the Duration in Seconds.', 0, 60, 30, 1, function(s)
     nitro.dursecs = s
 end)
 
-nitroMenu:slider('Duration in Minutes', {}, 'Adjust the Speed of the Nitrous Boost', 0, 10, 0, 1, function(s)
+nitroMenu:slider('Duration in Minutes', {}, 'Adjust the Duration in Minutes', 0, 10, 0, 1, function(s)
     nitro.durmin = s
 end)
 
