@@ -36,6 +36,8 @@ local nitro = {speed = 10, dursecs = 3, durmin = 0}
 
 local nitroMenu = menu.list(menu.ref_by_command_name("lenavehicle"), 'Nitrous', {}, 'Add Nitrous to your vehicle with the speed and duration.')
 
+menu.attach_after(menu.ref_by_command_name("lenacountermeasures"), menu.detach(nitroMenu))
+
 nitroMenu:toggle_loop('Nitrous', {'nitro'}, 'Add Nitrous to your vehicle with the speed and duration', function ()
     local curcar = entities.get_user_vehicle_as_handle()
     nitro.duration = Timemulti(nitro.dursecs, nitro.durmin)
