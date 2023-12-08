@@ -1,3 +1,7 @@
+-- Made by Lena (stand.dll). Why do I even add this?
+
+util.keep_running()
+
 local max_int = 2147483647
 
 local function streamPtfx(lib)
@@ -58,5 +62,3 @@ end)
 nitroMenu:slider('Duration in Minutes', {}, 'Adjust the Duration in Minutes', 0, 10, 0, 1, function(s)
     nitro.durmin = s
 end)
-
-util.keep_running()
