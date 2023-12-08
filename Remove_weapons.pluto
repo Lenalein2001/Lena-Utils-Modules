@@ -1,0 +1,71 @@
+-- Made by Lena (stand.dll). Why do I even add this?
+util.require_natives("natives-2944b")
+util.keep_running()
+
+local function remove_weap(p, h, label)
+    local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(p)
+    local name = players.get_name(p)
+
+    if WEAPON.HAS_PED_GOT_WEAPON(ped, h, false) and WEAPON.IS_PED_ARMED(ped, 7) then
+        WEAPON.REMOVE_WEAPON_FROM_PED(ped, h)
+        util.toast($"Removed {label} from {name}!")
+    end
+end
+
+local function check_railgun(hash, label)
+    if hash == 1834241177 then
+        label = "Railgun (SP)"
+    elseif hash == -22923932 then
+        label = "Railgun (MP)"
+    end
+    return label
+end
+
+local main_root = menu.ref_by_path("Players>All Players>Weapons>Give Weapons")
+local remove_weapons = menu.list(main_root, "Remove Weapons", {""}, "Remove weapons from players.")
+
+local mainCategory = {}
+for util.get_weapons() as weapon do
+    local hash = weapon.hash
+    local label = util.get_label_text(weapon.label_key)
+    label = check_railgun(hash, label)
+
+    local category = weapon.category
+    if not mainCategory[category] then
+        mainCategory[category] = menu.list(remove_weapons, category, {""}, "")
+    end
+
+    menu.toggle_loop(mainCategory[category], $"{label}", {}, $"No one will be able to equip or use {label}.", function()
+        for players.list(true, true, true) as p do
+            remove_weap(p, hash, label)
+        end
+    end)
+
+    menu.attach_after(main_root, menu.detach(remove_weapons))
+end
+
+players.add_command_hook(function(p, root)
+    local name = players.get_name(p)
+    local playerCategory = {}
+    local player_root = menu.ref_by_rel_path(menu.player_root(p), "Weapons>Give Weapons")
+    local remove_player_weapons = menu.list(root, "Remove Weapons", {""}, $"Remove the selected weapons from {name}")
+
+    for util.get_weapons() as weapon do
+        local hash = weapon.hash
+        local label = util.get_label_text(weapon.label_key)
+        if hash == 1834241177 then
+            label = "Railgun (SP)"
+        elseif hash == -22923932 then
+            label = "Railgun (MP)"
+        end
+        local category = weapon.category
+        if not playerCategory[category] then
+            playerCategory[category] = menu.list(remove_player_weapons, category, {""}, "")
+        end
+        menu.toggle_loop(playerCategory[category], $"{label}", {}, $"{label} is removed from {name}'s inventory if equipped.", function()
+            remove_weap(p, hash, label)
+        end)
+
+        menu.attach_after(player_root, menu.detach(remove_player_weapons))
+    end
+end)
