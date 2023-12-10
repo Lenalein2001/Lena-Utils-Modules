@@ -1,8 +1,70 @@
-function urlEncode(input)
+-- Made by Lena (stand.dll). Why do I even add this?
+
+local custom_types = {
+    "Vehicle>Garage>Save Vehicle",
+    "Self>Appearance>Outfit>Wardrobe>Save Outfit>Save Outfit",
+    "Stand>Profiles>Create Profile",
+    "Vehicle>Movement>Handling Editor>Presets>Save Preset"
+}
+
+local linkOrder = {"forgor", "reinstall", "protn_vpn", "dns", "doh", "preview", "hotkeys", "vpn"}
+
+local links = {
+    -- Commands
+    forgor = {
+        name = "Forgor ID",
+        text = "!forgorid",
+        des = "Useful if a User has forgotten their Account ID."
+    },
+
+    reinstall =  {
+        name = "Reinstall Stand",
+        text = "!regress",
+        des = "Which will upload a batch file with eventually useful tools."
+    },
+
+    protn_vpn = {
+        name = "Setup Proton VPN",
+        text = "!vpn",
+        des = "Will provide guidance to the user on how to download Proton VPN if they require assistance."
+    },
+
+    dns = {
+        name = "Set DNS up",
+        text = "!dns",
+        des = "If the user needs help configuring their DNS with 1.1.1.1, it will provide instructions. Will configure their DNS Setting. Needs to be done by the User."
+    },
+
+    doh = {
+        name = "Set DNS up V2",
+        text = "!dnsdoh",
+        des = "It will give instructions, on how to setup the doh.txt to allow Stand's traffic to be routed through 1.1.1.1. Will Modify their Meta State.txt file."
+    },
+
+    preview = {
+        name = "Upload compatibility mode exe",
+        text = "!previewfix",
+        des = "Which will upload an .exe that will set GTA V into compatibility mode to fix eventual issues on Preview Versions for Windows."
+    },
+
+    hotkeys = {
+        name = "Setup Hotkeys",
+        text = "!hotk",
+        des = "Quick Guide - On how to setup Hotkeys in Stand"
+    },
+    -- Links
+    vpn = {
+        name = "Cloudflare VPN",
+        text = "[Cloudflare WARP](https://1.1.1.1)",
+        des = "Cloudflare WARP VPN."
+    }
+}
+
+local function urlEncode(input)
     return input:gsub(">", "%%3E"):gsub("%s", "%%20")
 end
 
-function getFocusedCommand()
+local function getFocusedCommand()
     for menu.get_current_ui_list():getChildren() as cmd do
         if cmd:isFocused() then
             return cmd
@@ -10,14 +72,13 @@ function getFocusedCommand()
     end
 end
 
--- References and constants
 local tab_root = menu.ref_by_path("Self"):getParent()
 local version_info = menu.get_version()
 local root_name_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Root Name")
 local address_separator_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Address Separator")
 
 -- Get the path from a reference
-function getPathFromRef(cmd, lang_code, override_separator, include_root_name)
+local function getPathFromRef(cmd, lang_code, override_separator, include_root_name)
     local path = ""
     local separator = override_separator or address_separator_ref:getState():gsub(version_info.brand, ""):gsub("Online", "")
     local components = {}  -- Store components in reverse order
@@ -46,41 +107,69 @@ function getPathFromRef(cmd, lang_code, override_separator, include_root_name)
     return path:sub(0, -(separator:len() + 1))
 end
 
+local function get_type()
+    local cmd = getFocusedCommand()
+    local type = menu.get_type(cmd)
+    local output
+
+    for custom_types as t do
+        if menu.ref_by_path(t).menu_name == cmd.menu_name then
+            output = CUSTOM
+        else
+            output = type
+        end
+    end
+
+    return output
+end
 
 -- Get the command string from a reference
-function getCommandFromRef(default)
+local function getCommandFromRef(default: bool = false, allow_type: bool = true)
     local cmd = getFocusedCommand()
 
     if cmd then
         for menu.get_command_names(cmd) as input do
             local state, defaultstate = cmd:getState(), cmd:getDefaultState()
 
-            switch menu.get_type(cmd) do
-                case COMMAND_LIST_SEARCH:
-                    input ..= " [clue]"
-                    break
-                case COMMAND_ACTION:
-                    input ..= " " .. state
-                    break
-                default:
-                    input ..= " " .. (default and defaultstate or state)
+            if allow_type then
+                switch get_type() do
+                    case COMMAND_LIST_SEARCH:
+                        input ..= " [clue]"
+                        break
+                    case COMMAND_INPUT:
+                        input ..= " [input]"
+                        break
+                    case CUSTOM:
+                        input ..= " [name]"
+                        break
+                    case COMMAND_ACTION:
+                        input ..= " " .. state
+                        break
+                    default:
+                        input ..= " " .. (default and defaultstate or state)
+                        break
+                end
             end
 
-            return tostring(input)
+            local output = input
+
+            return tostring(output)
         end
     end
 end
 
-function getCommandDefault()
+local function getCommandDefault()
     local cmd = getFocusedCommand()
 
     if cmd then
         local state, default_state = cmd:getState(), cmd:getDefaultState()
-        return state != default_state and default_state or nil
+        if state != default_state then
+            return default_state
+        end
     end
 end
 
-function copyToClipboardWithHelpText(focusLink, commandLink, helpText)
+local function copyToClipboardWithHelpText(focusLink: ?string, commandLink: ?string, helpText: ?string)
     local clipboardText = "- Focus Link: " .. focusLink
 
     if commandLink and commandLink ~= "" then
@@ -95,9 +184,13 @@ function copyToClipboardWithHelpText(focusLink, commandLink, helpText)
 end
 
 -- Menu action to copy links
-menu.action(menu.ref_by_command_name("lenamisc"), "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
+local support = menu.list(menu.ref_by_command_name("lenamisc"), "Support Tools", {}, "")
+menu.attach_after(menu.ref_by_command_name("lenatp"), menu.detach(support))
+
+menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
     local focusLink, commandLink, helpText
     local cmd = getFocusedCommand()
+    local state = cmd:getState()
 
     if cmd then
         local encodedPath = urlEncode(getPathFromRef(cmd, "en", ">", false))
@@ -109,12 +202,14 @@ menu.action(menu.ref_by_command_name("lenamisc"), "Copy Link", {"copylinks"}, "U
         local command, defaultCommand = getCommandFromRef(), getCommandDefault()
 
         if command then
-            local encodedCommand= urlEncode(command)
+            local encodedCommand = urlEncode(getCommandFromRef(true, false)):gsub(state, "")
+            local formattedCommand = command:gsub("[%d.]+", "[value]"):gsub("On", "[toggle]"):gsub("Off", "[toggle]")
+
+            commandLink = "[U > " .. formattedCommand:gsub("%%20", " ") .. " > Enter](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
+
             if defaultCommand then
-                local encodedDefaultCommand  = urlEncode(defaultCommand)
-                commandLink = "- [U > " .. command:gsub("%%20", " ") .. " > Enter](<https://stand.gg/commandbox#" .. encodedCommand .. ">)"
-            else
-                commandLink = "- [U > " .. command:gsub("%%20", " ") .. " > Enter](<https://stand.gg/commandbox#" .. encodedCommand .. ">)\n - Default: [U > " .. defaultCommand:gsub("%%20", " ") .. " > Enter](<https://stand.gg/commandbox#" .. encodedDefaultCommand .. ">)"
+                local encodedDefaultCommand = urlEncode(getCommandFromRef(true))
+                commandLink ..= "\n - Default: [U > " .. defaultCommand:gsub("%%20", " ") .. " > Enter](<https://stand.gg/commandbox#" .. encodedDefaultCommand .. ">)"
             end
         end
 
@@ -123,3 +218,12 @@ menu.action(menu.ref_by_command_name("lenamisc"), "Copy Link", {"copylinks"}, "U
         notify("You are not focusing any command. :/")
     end
 end)
+
+menu.divider(support, "Links & Commands")
+
+for linkOrder as key do
+    local value = links[key]
+    menu.action(support, value.name, {"sup"..key}, value.des, function()
+        util.copy_to_clipboard(value.text, true)
+    end)
+end
