@@ -147,7 +147,6 @@ local function getCommandFromRef(default: bool = false, allow_type: bool = true)
                         break
                     default:
                         input ..= " " .. (default and defaultstate or state)
-                        break
                 end
             end
 
@@ -184,7 +183,7 @@ local function copyToClipboardWithHelpText(focusLink: ?string, commandLink: ?str
 end
 
 -- Menu action to copy links
-local support = menu.list(menu.ref_by_command_name("lenamisc"), "Support Tools", {}, "")
+local support = menu.list(menu.ref_by_command_name("lenamisc"), "Support Tools", {"supporttools"}, "")
 menu.attach_after(menu.ref_by_command_name("lenatp"), menu.detach(support))
 
 menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
@@ -194,7 +193,7 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
 
     if cmd then
         local encodedPath = urlEncode(getPathFromRef(cmd, "en", ">", false))
-        focusLink = "[" .. getPathFromRef(cmd, "en", ">", false) .. "](<https://stand.gg/focus#" .. encodedPath .. ">)"
+        focusLink = "[" .. getPathFromRef(cmd, "en", ">", false) .. " 🡭](<https://stand.gg/focus#" .. encodedPath .. ">)"
         helpText = lang.get_string(menu.get_help_text(cmd))
     end
 
@@ -205,11 +204,11 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
             local encodedCommand = urlEncode(getCommandFromRef(true, false)):gsub(state, "")
             local formattedCommand = command:gsub("[%d.]+", "[value]"):gsub("On", "[toggle]"):gsub("Off", "[toggle]")
 
-            commandLink = "[U > " .. formattedCommand:gsub("%%20", " ") .. " > Enter](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
+            commandLink = "[U > " .. formattedCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
 
             if defaultCommand then
                 local encodedDefaultCommand = urlEncode(getCommandFromRef(true))
-                commandLink ..= "\n - Default: [U > " .. defaultCommand:gsub("%%20", " ") .. " > Enter](<https://stand.gg/commandbox#" .. encodedDefaultCommand .. ">)"
+                commandLink ..= "\n - Default: [U > " .. defaultCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedDefaultCommand .. ">)"
             end
         end
 
