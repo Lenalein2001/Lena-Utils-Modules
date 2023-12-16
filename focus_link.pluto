@@ -66,9 +66,11 @@ end
 
 local function getFocusedCommand()
     for menu.get_current_ui_list():getChildren() as cmd do
+
         if cmd:isFocused() then
             return cmd
         end
+
     end
 end
 
@@ -124,33 +126,46 @@ local function get_type()
 end
 
 -- Get the command string from a reference
-local function getCommandFromRef(default: bool = false, allow_type: bool = true)
+local function getCommandFromRef(def_value: bool = false, allow_type: bool = true)
     local cmd = getFocusedCommand()
 
     if cmd then
         for menu.get_command_names(cmd) as input do
             local state, defaultstate = cmd:getState(), cmd:getDefaultState()
 
+            local output = input
+
             if allow_type then
                 switch get_type() do
                     case COMMAND_LIST_SEARCH:
-                        input ..= " [clue]"
+                        output ..= " [clue]"
                         break
                     case COMMAND_INPUT:
-                        input ..= " [input]"
+                        output ..= " [input]"
                         break
                     case CUSTOM:
-                        input ..= " [name]"
+                        output ..= " [name]"
+                        break
+                    case COMMAND_SLIDER:
+                        output ..= " (" .. cmd.min_value .. " to " .. cmd.max_value .. ")"
+                        break
+                    case COMMAND_SLIDER_FLOAT:
+                        output ..= " (" .. cmd.min_value .. " to " .. cmd.max_value .. ")"
                         break
                     case COMMAND_ACTION:
-                        input ..= " " .. state
+                        output ..= " " .. state
                         break
                     default:
-                        input ..= " " .. (default and defaultstate or state)
+                        output = " " .. (def_value and defaultstate or state)
+                        break
                 end
+            else
+                output = input .. " " .. state
             end
 
-            local output = input
+            if def_value then
+                output = input .. " " .. defaultstate
+            end
 
             return tostring(output)
         end
@@ -198,17 +213,17 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
     end
 
     if focusLink then
-        local command, defaultCommand = getCommandFromRef(), getCommandDefault()
+        local command, defaultCommand = getCommandFromRef(), getCommandFromRef(true)
 
         if command then
-            local encodedCommand = urlEncode(getCommandFromRef(true, false)):gsub(state, "")
-            local formattedCommand = command:gsub("[%d.]+", "[value]"):gsub("On", "[toggle]"):gsub("Off", "[toggle]")
+            local encodedCommand = urlEncode(getCommandFromRef(false, false)):gsub(state, "")
+            local formattedCommand = command:gsub("On", "[toggle]"):gsub("Off", "[toggle]")
 
             commandLink = "[U > " .. formattedCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
 
             if defaultCommand then
                 local encodedDefaultCommand = urlEncode(getCommandFromRef(true))
-                commandLink ..= "\n - Default: [U > " .. defaultCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedDefaultCommand .. ">)"
+                commandLink ..= "\n - Default State: [U > " .. defaultCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedDefaultCommand .. ">)"
             end
         end
 
