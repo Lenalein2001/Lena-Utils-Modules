@@ -150,7 +150,10 @@ local function getCommandFromRef(def_value: bool = false, allow_type: bool = tru
                         output ..= " (" .. cmd.min_value .. " to " .. cmd.max_value .. ")"
                         break
                     case COMMAND_SLIDER_FLOAT:
-                        output ..= " (" .. cmd.min_value .. " to " .. cmd.max_value .. ")"
+                        local cmd_prec, min_val, max_val = cmd.precision, cmd.min_value, cmd.max_value -- Thanks to @davus__ for this precision fix
+                        local f_min = string.format("%." .. cmd_prec .. "f", min_val / (10 ^ cmd_prec))
+                        local f_max = string.format("%." .. cmd_prec .. "f", max_val / (10 ^ cmd_prec))
+                        output ..= " [" .. f_min .. " to " .. f_max .. "]"
                         break
                     case COMMAND_ACTION:
                         output ..= " " .. state
