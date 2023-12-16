@@ -159,7 +159,7 @@ local function getCommandFromRef(def_value: bool = false, allow_type: bool = tru
                         output ..= " " .. state
                         break
                     default:
-                        output = " " .. (def_value and defaultstate or state)
+                        output = " " .. input .. (def_value and defaultstate or state)
                         break
                 end
             else
@@ -216,7 +216,7 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
     end
 
     if focusLink then
-        local command, defaultCommand = getCommandFromRef(), getCommandFromRef(true)
+        local command, defaultCommand = getCommandFromRef(), getCommandFromRef(true, false)
 
         if command then
             local encodedCommand = urlEncode(getCommandFromRef(false, false)):gsub(state, "")
@@ -224,7 +224,7 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
 
             commandLink = "[U > " .. formattedCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
 
-            if defaultCommand then
+            if getCommandDefault() then
                 local encodedDefaultCommand = urlEncode(getCommandFromRef(true))
                 commandLink ..= "\n - Default State: [U > " .. defaultCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedDefaultCommand .. ">)"
             end
