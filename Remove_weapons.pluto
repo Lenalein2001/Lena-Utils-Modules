@@ -9,6 +9,7 @@ local function remove_weap(p, h, label)
     if WEAPON.HAS_PED_GOT_WEAPON(ped, h, false) and WEAPON.IS_PED_ARMED(ped, 7) then
         WEAPON.REMOVE_WEAPON_FROM_PED(ped, h)
         util.toast($"Removed {label} from {name}!")
+        util.yield(1000)
     end
 end
 
