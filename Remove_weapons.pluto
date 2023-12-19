@@ -28,8 +28,7 @@ local remove_weapons = menu.list(main_root, "Remove Weapons", {""}, "Remove weap
 local mainCategory = {}
 for util.get_weapons() as weapon do
     local hash = weapon.hash
-    local label = util.get_label_text(weapon.label_key)
-    label = check_railgun(hash, label)
+    local label = check_railgun(hash, util.get_label_text(weapon.label_key))
 
     local category = weapon.category
     if not mainCategory[category] then
