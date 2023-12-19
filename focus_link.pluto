@@ -155,6 +155,9 @@ local function getCommandFromRef(def_value: bool = false, allow_type: bool = tru
                         local f_max = string.format("%." .. cmd_prec .. "f", max_val / (10 ^ cmd_prec))
                         output ..= " [" .. f_min .. " to " .. f_max .. "]"
                         break
+                    case COMMAND_LIST_SELECT:
+                        output ..= " [Text]"
+                        break
                     case COMMAND_ACTION:
                         output ..= " " .. state
                         break
