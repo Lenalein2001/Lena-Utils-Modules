@@ -64,14 +64,16 @@ local function urlEncode(input): string
     return input:gsub(">", "%%3E"):gsub("%s", "%%20")
 end
 
-local function getFocusedCommand()
-    for menu.get_current_ui_list():getChildren() as cmd do
+local function getFocusedCommand(): ?userdata
+	for menu.get_current_ui_list():getChildren() as cmd do
+		if cmd:getType() < COMMAND_FIRST_PHYSICAL then
+			cmd = cmd.target
+		end
 
-        if cmd:isFocused() then
-            return cmd
-        end
-
-    end
+		if cmd:isFocused() then
+			return cmd
+		end
+	end
 end
 
 local tab_root = menu.ref_by_path("Self"):getParent()
