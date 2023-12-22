@@ -60,7 +60,7 @@ local links = {
     }
 }
 
-local function urlEncode(input)
+local function urlEncode(input): string
     return input:gsub(">", "%%3E"):gsub("%s", "%%20")
 end
 
@@ -122,6 +122,7 @@ local function get_type()
         end
     end
 
+    -- print(type)
     return output
 end
 
@@ -189,8 +190,39 @@ local function getCommandDefault()
     end
 end
 
+local function modifyFocusLink(cmdPath) -- func from @davus__
+    -- dirty fix for vehicle links containing manufacturer-names.. and common links containing a player name
+    local manufacturer_names_ref = menu.ref_by_path("Vehicle>Spawner>Manufacturer Names")
+    local parent = getFocusedCommand():getParent()
+
+    if parent ~= tab_root then
+
+        if cmdPath:startswith("Players") or (cmdPath:startswith("Online>Player History") and cmdPath:match("[%[%]]")) then
+            local from_root, until_cmd = string.partition(cmdPath, "]")
+            from_root = from_root:sub(1, from_root:rfind(">"))
+            cmdPath = $"{from_root}[Player]{until_cmd}"
+        elseif parent:getParent():equals(menu.ref_by_path("Vehicle>Spawner>DLCs")) and manufacturer_names_ref.value then
+            manufacturer_names_ref.value = false
+            cmd = getFocusedCommand()
+            cmdPath = getPathFromRef(cmd, "en", ">", false)
+            manufacturer_names_ref.value = true
+        end
+
+    end
+
+    modifiedPath = cmdPath
+
+    return cmdPath
+end
+
 local function copyToClipboardWithHelpText(focusLink: ?string, commandLink: ?string, helpText: ?string)
-    local clipboardText = "- Focus Link: " .. focusLink
+    local clipboardText
+
+    if commandLink or helpText != "" then
+        clipboardText = "- Focus Link: " .. focusLink
+    else
+        clipboardText = focusLink
+    end
 
     if commandLink and commandLink ~= "" then
         clipboardText ..= "\n\n- Command Link: " .. commandLink
@@ -214,7 +246,15 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
 
     if cmd then
         local encodedPath = urlEncode(getPathFromRef(cmd, "en", ">", false))
-        focusLink = "[" .. getPathFromRef(cmd, "en", ">", false) .. " 🡭](<https://stand.gg/focus#" .. encodedPath .. ">)"
+        local originalPath = getPathFromRef(cmd, "en", ">", false)
+        local modifiedPath = modifyFocusLink(originalPath)
+
+        if modifiedPath:startswith("Players") or modifiedPath:startswith("Online>Player History") then
+            focusLink = modifiedPath:gsub(">", " > ")
+        else
+            focusLink = "[" .. modifiedPath:gsub(">", " > ") .. " 🡭](<https://stand.gg/focus#" .. encodedPath .. ">)"
+        end
+
         helpText = lang.get_string(menu.get_help_text(cmd))
     end
 
@@ -225,7 +265,11 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
             local encodedCommand = urlEncode(getCommandFromRef(false, false)):gsub(state, "")
             local formattedCommand = command:gsub("On", "[toggle]"):gsub("Off", "[toggle]")
 
-            commandLink = "[U > " .. formattedCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
+            if modifiedPath:startswith("Players") then
+                commandLink = nil -- Custom Command needs to be added later
+            else
+                commandLink = "[U > " .. formattedCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
+            end
 
             if getCommandDefault() then
                 local encodedDefaultCommand = urlEncode(getCommandFromRef(true))
