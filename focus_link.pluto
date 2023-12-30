@@ -26,7 +26,7 @@ local links = {
     protn_vpn = {
         name = "Setup Proton VPN",
         text = "!vpn",
-        des = "Will provide guidance to the user on how to download Proton VPN if they require assistance."
+        des = "Will guide the user on how to download Proton VPN if they require assistance."
     },
 
     dns = {
@@ -44,7 +44,7 @@ local links = {
     preview = {
         name = "Upload compatibility mode exe",
         text = "!previewfix",
-        des = "Which will upload an .exe that will set GTA V into compatibility mode to fix eventual issues on Preview Versions for Windows."
+        des = "This will upload a .exe that will set GTA V into compatibility mode to fix eventual issues on Preview Versions for Windows."
     },
 
     hotkeys = {
