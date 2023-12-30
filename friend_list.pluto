@@ -1,0 +1,36 @@
+-- Made by Lena (stand.dll). Why do I even add this?
+
+local friend_lists = menu.list(menu.ref_by_path("Online>Player History", 50), "Friend List", {""}, "")
+local anchor = menu.ref_by_path("Online>Player History>Tracked Players", 50)
+
+menu.attach_after(anchor, friend_lists:detach())
+
+local function gen_fren_funcs(name)
+    local friend_player_function = menu.list(friend_lists, name, {"friend "..name}, "", function(); end)
+
+    menu.divider(friend_player_function, name)
+
+    menu.action(friend_player_function, "Join", {"jf "..name}, "Join "..name, function()
+        trigger_commands("join "..name)
+    end)
+
+    menu.action(friend_player_function, "Spectate", {"sf "..name}, "Spectate "..name, function()
+        trigger_commands("namespectate "..name)
+    end)
+
+    menu.action(friend_player_function, "Invite", {"if "..name}, "Invite "..name, function()
+        trigger_commands("invite "..name)
+    end)
+
+    menu.action(friend_player_function, "Open profile", {"pf "..name}, "Open SC Profile from "..name, function()
+        trigger_commands("nameprofile "..name)
+    end)
+end
+
+menu.divider(friend_lists, "frens :)")
+for i = 0, NETWORK.NETWORK_GET_FRIEND_COUNT() do
+    local name = NETWORK.NETWORK_GET_FRIEND_DISPLAY_NAME(i)
+    if name == "*****" then goto skip end
+    gen_fren_funcs(name)
+    ::skip::
+end
