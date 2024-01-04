@@ -65,15 +65,7 @@ local function urlEncode(input): string
 end
 
 local function getFocusedCommand(): ?userdata
-	for menu.get_current_ui_list():getChildren() as cmd do
-		if cmd:getType() < COMMAND_FIRST_PHYSICAL then
-			cmd = cmd.target
-		end
-
-		if cmd:isFocused() then
-			return cmd
-		end
-	end
+    return menu.get_current_menu_list():getFocusPhysical()
 end
 
 local tab_root = menu.ref_by_path("Self"):getParent()
