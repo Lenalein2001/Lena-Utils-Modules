@@ -56,7 +56,7 @@ for _, vehicle in vehicleData do
             ENTITY.SET_ENTITY_AS_MISSION_ENTITY(veh_hdl, false, false)
 
             if not ENTITY.DOES_ENTITY_EXIST(veh_hdl) then
-                smenu.set_value(reader, "Doesn't exist.")
+                menu.set_value(reader, "Doesn't exist.")
             else
                 local health = VEHICLE.GET_VEHICLE_ENGINE_HEALTH(veh_hdl)
                 if health <= 0 then
