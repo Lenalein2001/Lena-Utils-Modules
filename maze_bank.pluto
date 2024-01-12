@@ -1,0 +1,51 @@
+local MazeBankMenu = menu.list(menu.my_root(), "Maze Bank", {}, "")
+
+local function getCurrentMoney()
+    return MONEY.NETWORK_GET_VC_WALLET_BALANCE(util.get_char_slot())
+end
+
+local function transferToBank(amount)
+    NETSHOPPING.NET_GAMESERVER_TRANSFER_WALLET_TO_BANK(util.get_char_slot(), amount)
+    util.yield()
+    util.toast("Transferred $" .. amount .. " to bank")
+end
+
+local function transferToWallet(amount)
+    NETSHOPPING.NET_GAMESERVER_TRANSFER_BANK_TO_WALLET(util.get_char_slot(), amount)
+    util.yield()
+    util.toast("Transferred $" .. amount .. " to wallet")
+end
+
+local function autoTransfer(desiredAmount, percentThreshold)
+    local currentMoney = getCurrentMoney()
+    desiredAmount = tonumber(desiredAmount)
+
+    if currentMoney > 2147483640 then
+        util.toast("Attempting to transfer all money to bank")
+        local wallet = currentMoney
+        repeat
+            wallet = getCurrentMoney()
+            transferToBank(wallet)
+        until wallet == 0
+    elseif currentMoney < desiredAmount * (1 - percentThreshold / 100) then
+        transferToWallet(desiredAmount - currentMoney)
+    elseif currentMoney > desiredAmount * (1 + percentThreshold / 100) then
+        transferToBank(currentMoney - desiredAmount)
+    end
+end
+
+local desiredAmountInput = menu.slider(MazeBankMenu, "Desired Amount", {"desired_amount"}, "", 0, 2147483640, 5000, 10000, function(on_change); end)
+
+menu.action(MazeBankMenu, "Transfer to Bank", {"transfer_to_bank"}, "", function()
+    transferToBank(desiredAmountInput.value)
+end)
+
+menu.action(MazeBankMenu, "Transfer to Wallet", {"transfer_to_wallet"}, "", function()
+    transferToWallet(desiredAmountInput.value)
+end)
+
+menu.toggle_loop(MazeBankMenu, "Auto Transfer", {"auto_transfer"}, "", function()
+    local percentThreshold = 10  -- You can adjust this threshold as needed
+    autoTransfer(desiredAmountInput.value, percentThreshold)
+    wait(1, "m")
+end)
