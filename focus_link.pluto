@@ -60,7 +60,7 @@ local links = {
     }
 }
 
-local function urlEncode(input): string
+local function urlEncode(input)
     return input:gsub(">", "%%3E"):gsub("%s", "%%20")
 end
 
@@ -121,7 +121,7 @@ local function get_type()
 end
 
 -- Get the command string from a reference
-local function getCommandFromRef(def_value: bool = false, allow_type: bool = true)
+local function getCommandFromRef(def_value = false, allow_type = true)
     local cmd = getFocusedCommand()
 
     if cmd then
@@ -272,8 +272,6 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
         end
 
         copyToClipboardWithHelpText(focusLink, commandLink, helpText)
-    else
-        notify("You are not focusing any command. :/")
     end
 end)
 
