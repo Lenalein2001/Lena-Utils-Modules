@@ -3,11 +3,11 @@
 util.keep_running()
 
 local function remove_weap(p, h, label)
-    local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(p)
+    local ped = GET_PLAYER_PED_SCRIPT_INDEX(p)
     local name = players.get_name(p)
 
-    if WEAPON.HAS_PED_GOT_WEAPON(ped, h, false) and WEAPON.IS_PED_ARMED(ped, 7) then
-        WEAPON.REMOVE_WEAPON_FROM_PED(ped, h)
+    if HAS_PED_GOT_WEAPON(ped, h, false) and IS_PED_ARMED(ped, 7) then
+        REMOVE_WEAPON_FROM_PED(ped, h)
         util.toast($"Removed {label} from {name}!")
         util.yield(1000)
     end

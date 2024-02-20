@@ -1,4 +1,5 @@
 -- Define the vehicle data table with joaat, initial pos, and heading/yaw
+local joaat = util.joaat
 local vehicleData = {
     {joaat = joaat("savage"),   pos = v3.new(-724.3226, -1443.5978, 5.000525),   yaw = 139,  sprite = 64},
     {joaat = joaat("lazer"),    pos = v3.new(-1821.0751, 2971.0571, 32.809982),  yaw = 60,   sprite = 424},
@@ -17,7 +18,6 @@ for _, vehicle in vehicleData do
 
     menu.toggle_loop(vehRoot, "Spawn " .. veh_name, {""}, "", function()
         if not in_session() then
-            veh_hdl = nil
             return
         end
 
@@ -25,11 +25,17 @@ for _, vehicle in vehicleData do
 
         local minimum_v3 = v3()
         local maximum_v3 = v3()
-        local dim = MISC.GET_MODEL_DIMENSIONS(vehicle.joaat, memory.addrof(minimum_v3), memory.addrof(maximum_v3))
-        local occupied = MISC.IS_AREA_OCCUPIED(v3.add(minimum_v3, vehicle.pos), v3.add(maximum_v3, vehicle.pos), false, true, true, false, false, false, false)
+        GET_MODEL_DIMENSIONS(vehicle.joaat, memory.addrof(minimum_v3), memory.addrof(maximum_v3))
 
-        if occupied and not veh_hdl then
+        local occupied = IS_AREA_OCCUPIED(v3.add(minimum_v3, vehicle.pos), v3.add(maximum_v3, vehicle.pos), false, true, true, false, false, false, false)
+		util.draw_box(vehicle.pos, v3(0, 0, vehicle.yaw), maximum_v3:sub(minimum_v3), 100, 0, 0, 100)
+        if occupied then
             menu.set_value(reader, "Occupied")
+            return
+        end
+
+        if v3.distance(players.get_position(players.user()), vehicle.pos) > 700 then
+            menu.set_value(reader, "Out of Range")
             return
         end
 
@@ -37,28 +43,34 @@ for _, vehicle in vehicleData do
             veh_hdl = entities.create_vehicle(vehicle.joaat, vehicle.pos, vehicle.yaw)
             notify("Spawning a ".. veh_name)
 
-            local blip = HUD.ADD_BLIP_FOR_ENTITY(veh_hdl)
-            HUD.SET_BLIP_SPRITE(blip, vehicle.sprite)
-            HUD.SET_BLIP_COLOUR(blip, 9)
-        elseif veh_hdl and VEHICLE.GET_VEHICLE_ENGINE_HEALTH(veh_hdl) <= -3000 or not ENTITY.DOES_ENTITY_EXIST(veh_hdl) then
+            local blip = ADD_BLIP_FOR_ENTITY(veh_hdl)
+            SET_BLIP_SPRITE(blip, vehicle.sprite)
+            SET_BLIP_COLOUR(blip, 9)
+        elseif veh_hdl and GET_VEHICLE_ENGINE_HEALTH(veh_hdl) <= -3000 or not DOES_ENTITY_EXIST(veh_hdl) then
             entities.delete(veh_hdl)
             menu.set_value(reader, "On Cooldown.")
             wait(30, "s")
 
-            veh_hdl = entities.create_vehicle(vehicle.joaat, vehicle.pos, vehicle.yaw)
-            local blip = HUD.ADD_BLIP_FOR_ENTITY(veh_hdl)
-            HUD.SET_BLIP_SPRITE(blip, vehicle.sprite)
-            HUD.SET_BLIP_COLOUR(blip, 9)
+            if not occupied then
+                notify("Spawning a ".. veh_name)
+                veh_hdl = entities.create_vehicle(vehicle.joaat, vehicle.pos, vehicle.yaw)
+                local blip = ADD_BLIP_FOR_ENTITY(veh_hdl)
+                SET_BLIP_SPRITE(blip, vehicle.sprite)
+                SET_BLIP_COLOUR(blip, 9)
+            else
+                menu.set_value(reader, "Occupied")
+                return
+            end
         end
 
         if veh_hdl != nil then
-            ENTITY.SET_ENTITY_LOAD_COLLISION_FLAG(veh_hdl, true, false)
-            ENTITY.SET_ENTITY_AS_MISSION_ENTITY(veh_hdl, false, false)
+            SET_ENTITY_LOAD_COLLISION_FLAG(veh_hdl, true, false)
+            SET_ENTITY_AS_MISSION_ENTITY(veh_hdl, false, false)
 
-            if not ENTITY.DOES_ENTITY_EXIST(veh_hdl) then
+            if not DOES_ENTITY_EXIST(veh_hdl) then
                 menu.set_value(reader, "Doesn't exist.")
             else
-                local health = VEHICLE.GET_VEHICLE_ENGINE_HEALTH(veh_hdl)
+                local health = GET_VEHICLE_ENGINE_HEALTH(veh_hdl)
                 if health <= 0 then
                     menu.set_value(reader, "Destroyed")
                 else

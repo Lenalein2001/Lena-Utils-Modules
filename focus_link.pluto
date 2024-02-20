@@ -4,7 +4,8 @@ local custom_types = {
     "Vehicle>Garage>Save Vehicle",
     "Self>Appearance>Outfit>Wardrobe>Save Outfit>Save Outfit",
     "Stand>Profiles>Create Profile",
-    "Vehicle>Movement>Handling Editor>Presets>Save Preset"
+    "Vehicle>Movement>Handling Editor>Presets>Save Preset",
+    "Online>Rockstar ID Tools>Join Session By Name"
 }
 
 local linkOrder = {"forgor", "reinstall", "protn_vpn", "dns", "doh", "preview", "hotkeys", "vpn"}
@@ -60,7 +61,7 @@ local links = {
     }
 }
 
-local function urlEncode(input)
+local function urlEncode(input): string
     return input:gsub(">", "%%3E"):gsub("%s", "%%20")
 end
 
@@ -116,12 +117,11 @@ local function get_type()
         end
     end
 
-    -- print(type)
     return output
 end
 
 -- Get the command string from a reference
-local function getCommandFromRef(def_value = false, allow_type = true)
+local function getCommandFromRef(def_value = false, allow_type = true): string
     local cmd = getFocusedCommand()
 
     if cmd then
@@ -177,31 +177,31 @@ local function getCommandDefault()
     local cmd = getFocusedCommand()
 
     if cmd then
-        local state, default_state = cmd:getState(), cmd:getDefaultState()
-        if state != default_state then
-            return default_state
-        end
+        return cmd:getDefaultState()
     end
 end
 
-local function modifyFocusLink(cmdPath) -- func from @davus__
+local function modifyFocusLink(cmdPath): string -- got help from @davus__
     -- dirty fix for vehicle links containing manufacturer-names.. and common links containing a player name
     local manufacturer_names_ref = menu.ref_by_path("Vehicle>Spawner>Manufacturer Names")
     local parent = getFocusedCommand():getParent()
 
     if parent ~= tab_root then
 
-        if cmdPath:startswith("Players") or (cmdPath:startswith("Online>Player History") and cmdPath:match("[%[%]]")) then
-            local from_root, until_cmd = string.partition(cmdPath, "]")
-            from_root = from_root:sub(1, from_root:rfind(">"))
-            cmdPath = $"{from_root}[Player]{until_cmd}"
-        elseif parent:getParent():equals(menu.ref_by_path("Vehicle>Spawner>DLCs")) and manufacturer_names_ref.value then
-            manufacturer_names_ref.value = false
-            cmd = getFocusedCommand()
-            cmdPath = getPathFromRef(cmd, "en", ">", false)
-            manufacturer_names_ref.value = true
-        end
+        for players.list() as pid do
+            local n = players.get_name(pid)
 
+            if cmdPath:find(n) or (cmdPath:startswith("Online>Player History") and cmdPath:match("[%[%]]")) then
+                local from_root, until_cmd = string.partition(cmdPath, "]")
+                from_root = from_root:sub(1, from_root:rfind(">"))
+                cmdPath = $"{from_root}[Player]{until_cmd}"
+            elseif parent:getParent():equals(menu.ref_by_path("Vehicle>Spawner>DLCs")) and manufacturer_names_ref.value then
+                manufacturer_names_ref.value = false
+                cmd = getFocusedCommand()
+                cmdPath = getPathFromRef(cmd, "en", ">", false)
+                manufacturer_names_ref.value = true
+            end
+        end
     end
 
     modifiedPath = cmdPath
@@ -209,7 +209,7 @@ local function modifyFocusLink(cmdPath) -- func from @davus__
     return cmdPath
 end
 
-local function copyToClipboardWithHelpText(focusLink: ?string, commandLink: ?string, helpText: ?string)
+local function copyToClipboardWithHelpText(focusLink: string, commandLink: ?string, helpText: ?string)
     local clipboardText
 
     if commandLink or helpText != "" then
