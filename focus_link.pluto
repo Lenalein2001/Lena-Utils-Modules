@@ -131,34 +131,17 @@ local function getCommandFromRef(def_value = false, allow_type = true): string
             local output = input
 
             if allow_type then
-                switch get_type() do
-                    case COMMAND_LIST_SEARCH:
-                        output ..= " [clue]"
-                        break
-                    case COMMAND_INPUT:
-                        output ..= " [input]"
-                        break
-                    case CUSTOM:
-                        output ..= " [name]"
-                        break
-                    case COMMAND_SLIDER:
-                        output ..= " (" .. cmd.min_value .. " to " .. cmd.max_value .. ")"
-                        break
-                    case COMMAND_SLIDER_FLOAT:
-                        local cmd_prec, min_val, max_val = cmd.precision, cmd.min_value, cmd.max_value -- Thanks to @davus__ for this precision fix
-                        local f_min = string.format("%." .. cmd_prec .. "f", min_val / (10 ^ cmd_prec))
-                        local f_max = string.format("%." .. cmd_prec .. "f", max_val / (10 ^ cmd_prec))
-                        output ..= " [" .. f_min .. " to " .. f_max .. "]"
-                        break
-                    case COMMAND_LIST_SELECT:
-                        output ..= " [Text]"
-                        break
-                    case COMMAND_ACTION:
-                        output ..= " " .. state
-                        break
-                    default:
-                        output = " " .. input .. (def_value and defaultstate or state)
-                        break
+                output ..= switch get_type() do
+                    case CUSTOM -> " [name]"
+                    case COMMAND_LIST_SEARCH -> " [clue]"
+                    case COMMAND_INPUT -> " [input]"
+                    case COMMAND_TOGGLE_NO_CORRELATION -> " [on/off]"
+                    case COMMAND_TOGGLE -> " [on/off]"
+                    case COMMAND_SLIDER -> $" {cmd.min_value} to {cmd.max_value}"
+                    case COMMAND_SLIDER_FLOAT -> $" {cmd.min_value / 100} to {cmd.max_value / 100}"
+                    case COMMAND_LIST_SELECT -> " [Text]"
+                    case COMMAND_ACTION -> " " .. state
+                    default -> " " .. input .. (def_value and defaultstate or state)
                 end
             else
                 output = input .. " " .. state
@@ -253,21 +236,19 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
     end
 
     if focusLink then
-        local command, defaultCommand = getCommandFromRef(), getCommandFromRef(true, false)
+        local command = getCommandFromRef()
 
         if command then
             local encodedCommand = urlEncode(getCommandFromRef(false, false)):gsub(state, "")
-            local formattedCommand = command:gsub("On", "[toggle]"):gsub("Off", "[toggle]")
 
             if modifiedPath:startswith("Players") then
                 commandLink = nil -- Custom Command needs to be added later
             else
-                commandLink = "[U > " .. formattedCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
+                commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
             end
 
             if getCommandDefault() then
-                local encodedDefaultCommand = urlEncode(getCommandFromRef(true))
-                commandLink ..= "\n - Default State: [U > " .. defaultCommand:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedDefaultCommand .. ">)"
+                commandLink ..= "\n - Default State: " .. tostring(getCommandDefault())
             end
         end
 
