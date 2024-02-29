@@ -156,14 +156,6 @@ local function getCommandFromRef(def_value = false, allow_type = true): string
     end
 end
 
-local function getCommandDefault()
-    local cmd = getFocusedCommand()
-
-    if cmd then
-        return cmd:getDefaultState()
-    end
-end
-
 local function modifyFocusLink(cmdPath): string -- got help from @davus__
     -- dirty fix for vehicle links containing manufacturer-names.. and common links containing a player name
     local manufacturer_names_ref = menu.ref_by_path("Vehicle>Spawner>Manufacturer Names")
@@ -247,9 +239,7 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
                 commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
             end
 
-            if getCommandDefault() then
-                commandLink ..= "\n - Default State: " .. tostring(getCommandDefault())
-            end
+            commandLink ..= cmd:getDefaultState() != "" and "\n - Default State: " .. cmd:getDefaultState() or ""
         end
 
         copyToClipboardWithHelpText(focusLink, commandLink, helpText)
