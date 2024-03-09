@@ -1,0 +1,125 @@
+local root = menu.list(vehicle_root, "Resupply Checkpoints")
+
+local checkpointsPos = {
+    {x = -1924.3021, y = 3026.4568, z = 32.810287},
+    {x = 1606.1278, y = 3223.7344, z = 41.421734},
+    {x = -75.16221, y = -819.1222, z = 326.1752}
+}
+
+local blipsCreated = false
+local blips = {}
+local checkpoints = {}
+
+function CreateBlips(checkpoints)
+    for checkpointsPos as pos do
+        local blip = ADD_BLIP_FOR_COORD(pos.x, pos.y, pos.z)
+        SET_BLIP_SPRITE(blip, "402")
+        SET_BLIP_COLOUR(blip, 48)
+        SET_BLIP_AS_MINIMAL_ON_EDGE(blip, true)
+        SET_RADIUS_BLIP_EDGE(blip, true)
+        SET_BLIP_AS_SHORT_RANGE(blip, true)
+        SET_BLIP_DISPLAY(blip, 2)
+        table.insert(blips, blip)
+    end
+    blipsCreated = true
+end
+
+function CreateCheckpoints(checkpoints)
+    for checkpointsPos as element do
+        local checkpoint = CREATE_CHECKPOINT(11, element.x, element.y, element.z + 1, element.x, element.y, element.z, 6, 255, 0, 128, 66, 0)
+        table.insert(checkpoints, checkpoint)
+        util.yield()
+    end
+end
+
+function doCleanup()
+    for blips as b do
+        util.remove_blip(b)
+    end
+    for checkpoints as c do
+        DELETE_CHECKPOINT(c)
+    end
+    blips = {}
+end
+
+local function cooldown()
+    wasInZone = true
+    for blips as blip do
+        SET_BLIP_COLOUR(blip, 1)
+    end
+    for checkpoints as check do
+        SET_CHECKPOINT_RGBA(check, 255, 13, 13, 10)
+    end
+    wait(1, "m")
+    for blips as blip do
+        SET_BLIP_COLOUR(blip, 48)
+    end
+    for checkpoints as check do
+        SET_CHECKPOINT_RGBA(check, 255, 0, 128, 66)
+    end
+    wasInZone = false
+end
+
+local radius = 6
+local closestMarker = nil
+local closestDistance = math.huge
+local wasInZone = false
+
+menu.toggle_loop(root, "Resupply Checkpoints", {""}, "", function()
+    if not in_session() then
+        closestMarker = nil
+        closestDistance = math.huge
+        blipsCreated = false
+        return
+    end
+
+    if not blipsCreated then
+        doCleanup()
+        CreateBlips(checkpoints)
+        CreateCheckpoints(checkpoints)
+    end
+
+    closestMarker = nil
+    closestDistance = math.huge
+    local player = players.get_position(players.user())
+
+    for checkpointsPos as pos do
+        local distance = math.sqrt((player.x - pos.x) ^ 2 + (player.y - pos.y) ^ 2 + (player.z - pos.z) ^ 2)
+
+        if distance < closestDistance then
+            closestMarker = pos
+            closestDistance = distance
+        end
+
+        if closestMarker then
+            local markerPosition = closestMarker
+            if not wasInZone then
+                DRAW_SPOT_LIGHT(pos.x, pos.y, pos.z + 0.6, 0, 0, -1, 255, 0, 128, 5, 5, 0, 200, 1)
+            else
+                DRAW_SPOT_LIGHT(pos.x, pos.y, pos.z + 0.6, 0, 0, -1, 255, 0, 0, 5, 5, 0, 200, 1)
+            end
+            if closestDistance <= radius and not wasInZone then
+                if not IS_PED_SITTING_IN_ANY_VEHICLE(players.user_ped()) then return end
+                trigger_commands("fixvehicle")
+                if DOES_VEHICLE_HAVE_WEAPONS(user_vehicle) then
+                    SET_VEHICLE_COUNTERMEASURE_AMMO(user_vehicle, 20)
+                    SET_VEHICLE_BOMB_AMMO(user_vehicle, 100)
+                    --if GET_VEHICLE_WEAPON_RESTRICTED_AMMO(user_vehicle) != -1 then
+                    --    SET_VEHICLE_WEAPON_RESTRICTED_AMMO(user_vehicle, _, 100)
+                    --end
+                end
+                notify("Vehicle was repaired and restocked.")
+                cooldown()
+            end
+        else
+            closestMarker = nil
+            closestDistance = math.huge
+        end
+    end
+end, function()
+    doCleanup()
+    closestMarker = nil
+    closestDistance = math.huge
+    blipsCreated = false
+end)
+
