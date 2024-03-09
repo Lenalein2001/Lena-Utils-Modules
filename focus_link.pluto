@@ -121,7 +121,7 @@ local function get_type()
 end
 
 -- Get the command string from a reference
-local function getCommandFromRef(def_value = false, allow_type = true): string
+local function getCommandFromRef(def_value = false, allow_type = true)
     local cmd = getFocusedCommand()
 
     if cmd then
@@ -156,7 +156,7 @@ local function getCommandFromRef(def_value = false, allow_type = true): string
     end
 end
 
-local function modifyFocusLink(cmdPath): string -- got help from @davus__
+local function modifyFocusLink(cmdPath) -- got help from @davus__
     -- dirty fix for vehicle links containing manufacturer-names.. and common links containing a player name
     local manufacturer_names_ref = menu.ref_by_path("Vehicle>Spawner>Manufacturer Names")
     local parent = getFocusedCommand():getParent()
@@ -184,7 +184,7 @@ local function modifyFocusLink(cmdPath): string -- got help from @davus__
     return cmdPath
 end
 
-local function copyToClipboardWithHelpText(focusLink: string, commandLink: ?string, helpText: ?string)
+local function copyToClipboardWithHelpText(focusLink, commandLink, helpText)
     local clipboardText
 
     if commandLink or helpText != "" then
@@ -234,12 +234,19 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
             local encodedCommand = urlEncode(getCommandFromRef(false, false)):gsub(state, "")
 
             if modifiedPath:startswith("Players") then
-                commandLink = nil -- Custom Command needs to be added later
+                for players.list() as p do
+                    local n = players.get_name(p):lower()
+                    if command:find(n) then
+                        commandLink = "U > " .. command:gsub(n, " [Player]") .. " > Enter"
+                    end
+                end
             else
                 commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
             end
 
-            commandLink ..= cmd:getDefaultState() != "" and "\n - Default State: " .. cmd:getDefaultState() or ""
+            if commandLink then
+                commandLink ..= cmd:getDefaultState() != "" and "\n - Default State: " .. cmd:getDefaultState() or ""
+            end
         end
 
         copyToClipboardWithHelpText(focusLink, commandLink, helpText)
