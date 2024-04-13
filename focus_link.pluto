@@ -53,6 +53,13 @@ local links = {
         text = "!hotk",
         des = "Quick Guide - On how to setup Hotkeys in Stand"
     },
+
+    mssucks = {
+        name = "Fix Windoof",
+        text = "!mssucks",
+        des = "Which will upload a file that will restore some system files to fix a unique issue where the windows av settings are literally not available and blocked by your \"IT Administrator\". "
+    },
+
     -- Links
     vpn = {
         name = "Cloudflare VPN",
@@ -60,10 +67,6 @@ local links = {
         des = "Cloudflare WARP VPN."
     }
 }
-
-local function urlEncode(input): string
-    return input:gsub(">", "%%3E"):gsub("%s", "%%20")
-end
 
 local function getFocusedCommand(): ?userdata
     return menu.get_current_menu_list():getFocusPhysical()
@@ -75,13 +78,13 @@ local root_name_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Ro
 local address_separator_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Address Separator")
 
 -- Get the path from a reference
-local function getPathFromRef(cmd, lang_code, override_separator, include_root_name)
+local function getPathFromRef(ref, lang_code, override_separator, include_root_name)
     local path = ""
     local separator = override_separator or address_separator_ref:getState():gsub(version_info.brand, ""):gsub("Online", "")
     local components = {}  -- Store components in reverse order
 
-    while cmd:isValid() and (include_root_name or not cmd:equals(tab_root)) do
-        local name = cmd:equals(tab_root) and (root_name_ref.value ~= 0 and root_name_ref:getState():gsub("{}", version_info.version) or "") or cmd.menu_name
+    while ref:isValid() and (include_root_name or not ref:equals(tab_root)) do
+        local name = ref:equals(tab_root) and (root_name_ref.value ~= 0 and root_name_ref:getState():gsub("{}", version_info.version) or "") or ref.menu_name
         local hash = tonumber(name)
         if hash then
             name = lang.get_string(hash, lang_code or lang.get_current())
@@ -89,7 +92,7 @@ local function getPathFromRef(cmd, lang_code, override_separator, include_root_n
         if #name > 0 then
             table.insert(components, name)
         end
-        cmd = cmd:getParent()
+        ref = ref:getParent()
     end
 
     -- Reverse the order of components when constructing the path
@@ -105,12 +108,12 @@ local function getPathFromRef(cmd, lang_code, override_separator, include_root_n
 end
 
 local function get_type()
-    local cmd = getFocusedCommand()
-    local type = menu.get_type(cmd)
+    local ref = getFocusedCommand()
+    local type = menu.get_type(ref)
     local output
 
     for custom_types as t do
-        if menu.ref_by_path(t).menu_name == cmd.menu_name then
+        if menu.ref_by_path(t).menu_name == ref.menu_name then
             output = CUSTOM
         else
             output = type
@@ -122,37 +125,37 @@ end
 
 -- Get the command string from a reference
 local function getCommandFromRef(def_value = false, allow_type = true)
-    local cmd = getFocusedCommand()
+    local ref = getFocusedCommand()
+    local input = menu.get_command_names(ref)[1]
 
-    if cmd then
-        for menu.get_command_names(cmd) as input do
-            local state, defaultstate = cmd:getState(), cmd:getDefaultState()
+    if input then
+        local state, defaultstate = ref:getState(), ref:getDefaultState()
 
-            local output = input
+        local output = input
 
-            if allow_type then
-                output ..= switch get_type() do
-                    case CUSTOM -> " [name]"
-                    case COMMAND_LIST_SEARCH -> " [clue]"
-                    case COMMAND_INPUT -> " [input]"
-                    case COMMAND_TOGGLE_NO_CORRELATION -> " [on/off]"
-                    case COMMAND_TOGGLE -> " [on/off]"
-                    case COMMAND_SLIDER -> $" {cmd.min_value} to {cmd.max_value}"
-                    case COMMAND_SLIDER_FLOAT -> $" {cmd.min_value / 100} to {cmd.max_value / 100}"
-                    case COMMAND_LIST_SELECT -> " [Text]"
-                    case COMMAND_ACTION -> " " .. state
-                    default -> " " .. input .. (def_value and defaultstate or state)
-                end
-            else
-                output = input .. " " .. state
+        if allow_type and input then
+            output ..= switch get_type() do
+                case CUSTOM -> " [name]"
+                case COMMAND_LIST_SEARCH -> " [clue]"
+                case COMMAND_INPUT -> " [input]"
+                case COMMAND_TOGGLE_NO_CORRELATION -> " [on/off]"
+                case COMMAND_TOGGLE -> " [on/off]"
+                case COMMAND_SLIDER -> $" {ref.min_value} to {ref.max_value}"
+                case COMMAND_SLIDER_FLOAT -> $" {ref.min_value / 100} to {ref.max_value / 100}"
+                case COMMAND_LIST_SELECT -> " [Text]"
+                case COMMAND_ACTION -> " " .. state
+                case COMMAND_LIST -> ""
+                default -> " " .. input .. (def_value and defaultstate or state)
             end
-
-            if def_value then
-                output = input .. " " .. defaultstate
-            end
-
-            return tostring(output)
+        else
+            output = input .. " " .. state
         end
+
+        if def_value then
+            output = input .. " " .. defaultstate
+        end
+
+        return lang.get_localised(output)
     end
 end
 
@@ -172,8 +175,8 @@ local function modifyFocusLink(cmdPath) -- got help from @davus__
                 cmdPath = $"{from_root}[Player]{until_cmd}"
             elseif parent:getParent():equals(menu.ref_by_path("Vehicle>Spawner>DLCs")) and manufacturer_names_ref.value then
                 manufacturer_names_ref.value = false
-                cmd = getFocusedCommand()
-                cmdPath = getPathFromRef(cmd, "en", ">", false)
+                ref = getFocusedCommand()
+                cmdPath = getPathFromRef(ref, "en", ">", false)
                 manufacturer_names_ref.value = true
             end
         end
@@ -210,12 +213,13 @@ menu.attach_after(menu.ref_by_command_name("lenatp"), menu.detach(support))
 
 menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
     local focusLink, commandLink, helpText
-    local cmd = getFocusedCommand()
-    local state = cmd:getState()
+    local ref = getFocusedCommand()
+    local state = ref:getState()
+    local command = getCommandFromRef()
 
-    if cmd then
-        local encodedPath = urlEncode(getPathFromRef(cmd, "en", ">", false))
-        local originalPath = getPathFromRef(cmd, "en", ">", false)
+    if ref then
+        local encodedPath = plutoURL.encode(getPathFromRef(ref, "en", ">", false))
+        local originalPath = getPathFromRef(ref, "en", ">", false)
         local modifiedPath = modifyFocusLink(originalPath)
 
         if modifiedPath:startswith("Players") or modifiedPath:startswith("Online>Player History") then
@@ -224,37 +228,32 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
             focusLink = "[" .. modifiedPath:gsub(">", " > ") .. " 🡭](<https://stand.gg/focus#" .. encodedPath .. ">)"
         end
 
-        helpText = lang.get_string(menu.get_help_text(cmd))
+        helpText = lang.get_string(menu.get_help_text(ref))
     end
 
-    if focusLink then
-        local command = getCommandFromRef()
+    if command then
+        local urlCommand = plutoURL.encode(getCommandFromRef(false, false):gsub(state, ""))
 
-        if command then
-            local encodedCommand = urlEncode(getCommandFromRef(false, false)):gsub(state, "")
-
-            if modifiedPath:startswith("Players") then
-                for players.list() as p do
-                    local n = players.get_name(p):lower()
-                    if command:find(n) then
-                        commandLink = "U > " .. command:gsub(n, " [Player]") .. " > Enter"
-                    end
+        if modifiedPath:startswith("Players") then
+            for players.list() as p do
+                local n = players.get_name(p):lower()
+                if command:find(n) then
+                    commandLink = "U > " .. command:gsub(n, " [Player]") .. " > Enter"
                 end
-            else
-                commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. encodedCommand:gsub(state, "") .. ">)"
             end
-
-            if commandLink then
-                commandLink ..= cmd:getDefaultState() != "" and "\n - Default State: " .. cmd:getDefaultState() or ""
-            end
+        else
+            commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. urlCommand .. ">)"
         end
 
-        copyToClipboardWithHelpText(focusLink, commandLink, helpText)
+        if commandLink then
+            commandLink ..= ref:getDefaultState() != "" and "\n - Default State: " .. ref:getDefaultState() or ""
+        end
     end
+
+    copyToClipboardWithHelpText(focusLink, commandLink, helpText)
 end)
 
 menu.divider(support, "Links & Commands")
-
 for linkOrder as key do
     local value = links[key]
     menu.action(support, value.name, {"sup"..key}, value.des, function()

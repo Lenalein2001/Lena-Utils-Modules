@@ -122,4 +122,3 @@ end, function()
     closestDistance = math.huge
     blipsCreated = false
 end)
-
