@@ -1,7 +1,10 @@
 local MazeBankMenu = menu.list(menu.my_root(), "Maze Bank", {}, "")
+local char = util.get_char_slot()
 
 local function getCurrentMoney()
-    return NETWORK_GET_VC_WALLET_BALANCE(util.get_char_slot())
+    local wallet = util.stat_get_int64(util.joaat("MP" .. char .. "_WALLET_BALANCE"))
+    local bank = util.stat_get_int64(util.joaat("BANK_BALANCE"))
+    return wallet, bank
 end
 
 local function transferToBank(amount)
@@ -34,6 +37,27 @@ local function autoTransfer(desiredAmount, percentThreshold)
     end
 end
 
+menu.divider(MazeBankMenu, "Maze Bank")
+menu.readonly(MazeBankMenu, "Account Holder", SC_ACCOUNT_INFO_GET_NICKNAME())
+menu.readonly(MazeBankMenu, "Account ID", players.get_rockstar_id(players.user()))
+menu.divider(MazeBankMenu, "Balance")
+local refWallet = menu.readonly(MazeBankMenu, "Wallet", "$")
+local refBank = menu.readonly(MazeBankMenu, "Bank", "$")
+menu.divider(MazeBankMenu, "Businesses")
+local refNightclub = menu.readonly(MazeBankMenu, "Nightclub", "$")
+local refArcade = menu.readonly(MazeBankMenu, "Arcade", "$")
+local refAgency = menu.readonly(MazeBankMenu, "Agency", "$")
+
+util.create_tick_handler(function()
+    local w, b = getCurrentMoney()
+    update_value(refWallet, "$" .. string.formatint(w))
+    update_value(refBank, "$" .. string.formatint(b))
+    update_value(refNightclub, "$" .. string.formatint(SSTAT_GET_INT("CLUB_SAFE_CASH_VALUE")))
+    update_value(refArcade, "$" .. string.formatint(SSTAT_GET_INT("ARCADE_SAFE_CASH_VALUE")))
+    update_value(refAgency, "$" .. string.formatint(SSTAT_GET_INT("FIXER_SAFE_CASH_VALUE")))
+end)
+
+menu.divider(MazeBankMenu, "ATM")
 local desiredAmountInput = menu.slider(MazeBankMenu, "Desired Amount", {"desired_amount"}, "", 0, 2147483640, 5000, 10000, function(on_change); end)
 
 menu.action(MazeBankMenu, "Transfer to Bank", {"transfer_to_bank"}, "", function()
@@ -45,7 +69,7 @@ menu.action(MazeBankMenu, "Transfer to Wallet", {"transfer_to_wallet"}, "", func
 end)
 
 menu.toggle_loop(MazeBankMenu, "Auto Transfer", {"auto_transfer"}, "", function()
-    local percentThreshold = 10  -- You can adjust this threshold as needed
+    local percentThreshold = 10
     autoTransfer(desiredAmountInput.value, percentThreshold)
     wait(1, "m")
 end)
