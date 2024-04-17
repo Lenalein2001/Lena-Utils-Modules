@@ -126,15 +126,16 @@ end
 -- Get the command string from a reference
 local function getCommandFromRef(def_value = false, allow_type = true)
     local ref = getFocusedCommand()
-    local input = menu.get_command_names(ref)[1]
+    local input = menu.get_command_names(ref)
+    local firstInput = input[1]
+    local output = ""
 
-    if input then
+    if firstInput then
         local state, defaultstate = ref:getState(), ref:getDefaultState()
+        output = firstInput
 
-        local output = input
-
-        if allow_type and input then
-            output ..= switch get_type() do
+        if allow_type and firstInput then
+            output = firstInput .. switch get_type() do
                 case CUSTOM -> " [name]"
                 case COMMAND_LIST_SEARCH -> " [clue]"
                 case COMMAND_INPUT -> " [input]"
@@ -147,17 +148,22 @@ local function getCommandFromRef(def_value = false, allow_type = true)
                 case COMMAND_FLAG_LIST_ACTION -> ""
                 case COMMAND_ACTION -> " " .. state
                 case COMMAND_LIST -> ""
-                default -> " " .. input .. (def_value and defaultstate or state)
+                default -> " " .. firstInput .. (def_value and defaultstate or state)
             end
         else
-            output = input -- .. " " .. state
+            output = firstInput -- .. " " .. state
         end
 
         if def_value then
-            output = input .. " " .. defaultstate
+            output = firstInput .. " " .. defaultstate
         end
 
-        return lang.get_localised(output)
+        local otherInputs = {}
+        for i = 2, #input do
+            otherInputs[i - 1] = input[i]
+        end
+
+        return lang.get_localised(output), table.unpack(otherInputs)
     end
 end
 
@@ -217,7 +223,7 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
     local focusLink, commandLink, helpText
     local ref = getFocusedCommand()
     local state = ref:getState()
-    local command = getCommandFromRef()
+    local command, otherCommands = getCommandFromRef()
 
     if ref then
         local encodedPath = plutoURL.encode(getPathFromRef(ref, "en", ">", false))
@@ -244,11 +250,12 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
                 end
             end
         else
-            commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. urlCommand .. ">)"
+            commandLink     = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. urlCommand .. ">)"
+            commandLink   ..= "\n - Other variants: " .. otherCommands
         end
 
         if commandLink then
-            commandLink ..= ref:getDefaultState() != "" and "\n - Default State: " .. ref:getDefaultState() or ""
+            commandLink ..= ref:getDefaultState() != "" and "\n- Default State: " .. ref:getDefaultState() or ""
         end
     end
 
