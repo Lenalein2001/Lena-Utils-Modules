@@ -251,7 +251,9 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
             end
         else
             commandLink     = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. urlCommand .. ">)"
-            commandLink   ..= "\n - Other variants: " .. otherCommands
+            if otherCommands then
+                commandLink   ..= "\n - Other variants: " .. otherCommands
+            end
         end
 
         if commandLink then
