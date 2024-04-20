@@ -1,11 +1,71 @@
 local MazeBankMenu = menu.list(menu.my_root(), "Maze Bank", {}, "")
+local transactionMenu = menu.list(MazeBankMenu, "Transactions", {}, "")
 local char = util.get_char_slot()
+local playerName = SC_ACCOUNT_INFO_GET_NICKNAME()
+local transactionHistory = {}  -- Store transaction history
+local initialMoney = 0  -- Variable to store initial money value
 
+-- Load transaction history from file
+local function loadTransactionHistory()
+    local fileName = string.format(lenaDir.."%s_maze_bank.json", playerName)
+    local file = io.open(fileName, "r")
+    if file then
+        local content = file:read("*all")
+        transactionHistory = json.decode(content)
+        file:close()
+    end
+end
+
+-- Save transaction history to file
+local function saveTransactionHistory()
+    local fileName = string.format(lenaDir.."%s_maze_bank.json", playerName)
+    local file, error_message = io.open(fileName, "w")
+    if file then
+        file:write(json.encode(transactionHistory, true))
+        file:close()
+    else
+        print("Error: Unable to open file for writing:", error_message)
+    end
+end
+
+-- Function to get current money balances
 local function getCurrentMoney()
     local wallet = util.stat_get_int64(util.joaat("MP" .. char .. "_WALLET_BALANCE"))
     local bank = util.stat_get_int64(util.joaat("BANK_BALANCE"))
-    return wallet, bank
+    return wallet, bank, wallet + bank
 end
+
+local function checkAndWriteMoneyChange()
+    local _, _, currentMoney = getCurrentMoney()
+    if initialMoney == 0 then
+        initialMoney = currentMoney
+    end
+    local difference = currentMoney - initialMoney
+    if difference ~= 0 then
+        local today = os.date("%d-%m-%Y")
+        if transactionHistory[today] then
+            if difference > 0 then
+                transactionHistory[today].added = transactionHistory[today].added + difference
+            else
+                transactionHistory[today].removed = transactionHistory[today].removed - difference
+            end
+        else
+            if difference > 0 then
+                transactionHistory[today] = {date = today, added = difference, removed = 0}
+            else
+                transactionHistory[today] = {date = today, added = 0, removed = -difference}
+            end
+        end
+        saveTransactionHistory()  -- Save transaction history on each change
+        initialMoney = currentMoney
+    end
+end
+
+-- Load transaction history at the beginning
+loadTransactionHistory()
+
+-- Perform initial setup
+initialMoney = getCurrentMoney()
 
 local function transferToBank(amount)
     NET_GAMESERVER_TRANSFER_WALLET_TO_BANK(util.get_char_slot(), amount)
@@ -37,6 +97,15 @@ local function autoTransfer(desiredAmount, percentThreshold)
     end
 end
 
+-- Iterate over transactionHistory
+for date, transaction in pairs(transactionHistory) do
+    local this = menu.list(transactionMenu, date)
+    menu.divider(this, date)
+    menu.readonly(this, "Money Earned", "$" .. string.formatint(transaction.added))
+    menu.readonly(this, "Money Spend", "$" .. string.formatint(transaction.removed))
+    menu.readonly(this, "Money Made", "$" .. string.formatint(transaction.added - transaction.removed))
+end
+
 menu.divider(MazeBankMenu, "Maze Bank")
 menu.readonly(MazeBankMenu, "Account Holder", SC_ACCOUNT_INFO_GET_NICKNAME())
 menu.readonly(MazeBankMenu, "Account ID", players.get_rockstar_id(players.user()))
@@ -55,6 +124,8 @@ util.create_tick_handler(function()
     update_value(refNightclub, "$" .. string.formatint(SSTAT_GET_INT("CLUB_SAFE_CASH_VALUE")))
     update_value(refArcade, "$" .. string.formatint(SSTAT_GET_INT("ARCADE_SAFE_CASH_VALUE")))
     update_value(refAgency, "$" .. string.formatint(SSTAT_GET_INT("FIXER_SAFE_CASH_VALUE")))
+
+    checkAndWriteMoneyChange()
 end)
 
 menu.divider(MazeBankMenu, "ATM")
