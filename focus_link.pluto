@@ -51,7 +51,7 @@ local links = {
     hotkeys = {
         name = "Setup Hotkeys",
         text = "!hotk",
-        des = "Quick Guide - On how to setup Hotkeys in Stand"
+        des = "Quick Guide - On how to setup Hotkeys in Stand."
     },
 
     mssucks = {
@@ -147,7 +147,8 @@ local function getCommandFromRef(def_value = false, allow_type = true)
                 case 3 -> "" -- Weird Text select thing
                 case COMMAND_FLAG_LIST_ACTION -> ""
                 case COMMAND_ACTION -> " " .. state
-                case COMMAND_LIST -> ""
+                case COMMAND_LIST -> "" -- whar?
+                case COMMAND_LIST_COLOUR -> "" -- color list
                 default -> " " .. firstInput .. (def_value and defaultstate or state)
             end
         else
