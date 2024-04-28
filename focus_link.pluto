@@ -63,7 +63,7 @@ local links = {
     -- Links
     vpn = {
         name = "Cloudflare VPN",
-        text = "[Cloudflare WARP](https://1.1.1.1)",
+        text = "[Cloudflare WARP](<https://one.one.one.one)",
         des = "Cloudflare WARP VPN."
     }
 }
@@ -78,16 +78,16 @@ local root_name_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Ro
 local address_separator_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Address Separator")
 
 -- Get the path from a reference
-local function getPathFromRef(ref, lang_code, override_separator, include_root_name)
+local function getPathFromRef(ref, override_separator)
     local path = ""
     local separator = override_separator or address_separator_ref:getState():gsub(version_info.brand, ""):gsub("Online", "")
     local components = {}  -- Store components in reverse order
 
-    while ref:isValid() and (include_root_name or not ref:equals(tab_root)) do
+    while ref:isValid() and not ref:equals(tab_root) do
         local name = ref:equals(tab_root) and (root_name_ref.value ~= 0 and root_name_ref:getState():gsub("{}", version_info.version) or "") or ref.menu_name
         local hash = tonumber(name)
         if hash then
-            name = lang.get_string(hash, lang_code or lang.get_current())
+            name = lang.get_string(hash)
         end
         if #name > 0 then
             table.insert(components, name)
@@ -101,7 +101,7 @@ local function getPathFromRef(ref, lang_code, override_separator, include_root_n
     end
 
     if path == "" then
-        return ""
+        return nil
     end
 
     return path:sub(0, -(separator:len() + 1))
@@ -134,15 +134,16 @@ local function getCommandFromRef(def_value = false, allow_type = true)
         local state, defaultstate = ref:getState(), ref:getDefaultState()
         output = firstInput
 
-        if allow_type and firstInput then
+        if allow_type then
             output = firstInput .. switch get_type() do
                 case CUSTOM -> " [name]"
                 case COMMAND_LIST_SEARCH -> " [clue]"
                 case COMMAND_INPUT -> " [input]"
                 case COMMAND_TOGGLE_NO_CORRELATION -> " [on/off]"
                 case COMMAND_TOGGLE -> " [on/off]"
-                case COMMAND_SLIDER -> $" {ref.min_value} to {ref.max_value}"
-                case COMMAND_SLIDER_FLOAT -> $" {ref.min_value / 100} to {ref.max_value / 100}"
+                case COMMAND_TOGGLE_CUSTOM -> " [on/off]"
+                case COMMAND_SLIDER -> $" [{ref.min_value} to {ref.max_value}]"
+                case COMMAND_SLIDER_FLOAT -> $" [{ref.min_value / 100} to {ref.max_value / 100}]"
                 case COMMAND_LIST_SELECT -> " [Text]"
                 case 3 -> "" -- Weird Text select thing
                 case COMMAND_FLAG_LIST_ACTION -> ""
@@ -155,10 +156,6 @@ local function getCommandFromRef(def_value = false, allow_type = true)
             output = firstInput -- .. " " .. state
         end
 
-        if def_value then
-            output = firstInput .. " " .. defaultstate
-        end
-
         local otherInputs = {}
         for i = 2, #input do
             otherInputs[i - 1] = input[i]
@@ -168,12 +165,10 @@ local function getCommandFromRef(def_value = false, allow_type = true)
     end
 end
 
-local function modifyFocusLink(cmdPath) -- got help from @davus__
-    -- dirty fix for vehicle links containing manufacturer-names.. and common links containing a player name
-    local manufacturer_names_ref = menu.ref_by_path("Vehicle>Spawner>Manufacturer Names")
+local function modifyFocusLink(cmdPath)
     local parent = getFocusedCommand():getParent()
 
-    if parent ~= tab_root then
+    if parent != tab_root then
 
         for players.list() as pid do
             local n = players.get_name(pid)
@@ -182,18 +177,13 @@ local function modifyFocusLink(cmdPath) -- got help from @davus__
                 local from_root, until_cmd = string.partition(cmdPath, "]")
                 from_root = from_root:sub(1, from_root:rfind(">"))
                 cmdPath = $"{from_root}[Player]{until_cmd}"
-            elseif parent:getParent():equals(menu.ref_by_path("Vehicle>Spawner>DLCs")) and manufacturer_names_ref.value then
-                manufacturer_names_ref.value = false
-                ref = getFocusedCommand()
-                cmdPath = getPathFromRef(ref, "en", ">", false)
-                manufacturer_names_ref.value = true
             end
         end
     end
 
     modifiedPath = cmdPath
 
-    return cmdPath
+    return modifiedPath
 end
 
 local function copyToClipboardWithHelpText(focusLink, commandLink, helpText)
@@ -227,9 +217,8 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
     local command, otherCommands = getCommandFromRef()
 
     if ref then
-        local encodedPath = plutoURL.encode(getPathFromRef(ref, "en", ">", false))
-        local originalPath = getPathFromRef(ref, "en", ">", false)
-        local modifiedPath = modifyFocusLink(originalPath)
+        local encodedPath = plutoURL.encode(getPathFromRef(ref, ">"))
+        local modifiedPath = modifyFocusLink(getPathFromRef(ref, ">"))
 
         if modifiedPath:startswith("Players") or modifiedPath:startswith("Online>Player History") then
             focusLink = modifiedPath:gsub(">", " > ")
