@@ -8,7 +8,8 @@ local checkpointsPos = {
 
 local blipsCreated = false
 local blips = {}
-local checkpoints = {}
+local checkpointsTab = {}
+local radius = 10
 
 function CreateBlips(checkpoints)
     for checkpointsPos as pos do
@@ -26,8 +27,8 @@ end
 
 function CreateCheckpoints(checkpoints)
     for checkpointsPos as element do
-        local checkpoint = CREATE_CHECKPOINT(11, element.x, element.y, element.z + 1, element.x, element.y, element.z, 6, 255, 0, 128, 66, 0)
-        table.insert(checkpoints, checkpoint)
+        local checkpoint = CREATE_CHECKPOINT(11, element.x, element.y, element.z + 1, element.x, element.y, element.z, radius, 255, 0, 128, 66, 0)
+        table.insert(checkpointsTab, checkpoint)
         util.yield()
     end
 end
@@ -36,7 +37,7 @@ function doCleanup()
     for blips as b do
         util.remove_blip(b)
     end
-    for checkpoints as c do
+    for checkpointsTab as c do
         DELETE_CHECKPOINT(c)
     end
     blips = {}
@@ -47,20 +48,19 @@ local function cooldown()
     for blips as blip do
         SET_BLIP_COLOUR(blip, 1)
     end
-    for checkpoints as check do
+    for checkpointsTab as check do
         SET_CHECKPOINT_RGBA(check, 255, 13, 13, 10)
     end
     wait(1, "m")
     for blips as blip do
         SET_BLIP_COLOUR(blip, 48)
     end
-    for checkpoints as check do
+    for checkpointsTab as check do
         SET_CHECKPOINT_RGBA(check, 255, 0, 128, 66)
     end
     wasInZone = false
 end
 
-local radius = 6
 local closestMarker = nil
 local closestDistance = math.huge
 local wasInZone = false
