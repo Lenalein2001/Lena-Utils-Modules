@@ -16,6 +16,8 @@ local function loadTransactionHistory()
     end
 end
 
+loadTransactionHistory()
+
 -- Save transaction history to file
 local function saveTransactionHistory()
     local fileName = string.format(lenaDir.."%s_maze_bank.json", playerName)
@@ -30,19 +32,30 @@ end
 
 -- Function to get current money balances
 local function getCurrentMoney()
+    if !in_session() then return 0, 0, 0 end
     local wallet = util.stat_get_int64(util.joaat("MP" .. char .. "_WALLET_BALANCE"))
     local bank = util.stat_get_int64(util.joaat("BANK_BALANCE"))
     return wallet, bank, wallet + bank
 end
 
 local function checkAndWriteMoneyChange()
+    if !in_session() then return end
     local _, _, currentMoney = getCurrentMoney()
+
+    -- Only update initialMoney on the first run
     if initialMoney == 0 then
         initialMoney = currentMoney
+        return
     end
+
     local difference = currentMoney - initialMoney
-    if difference ~= 0 then
+
+    -- Reset initialMoney for the next check
+    initialMoney = currentMoney
+
+    if difference != 0 then
         local today = os.date("%d-%m-%Y")
+
         if transactionHistory[today] then
             if difference > 0 then
                 transactionHistory[today].added = transactionHistory[today].added + difference
@@ -56,16 +69,13 @@ local function checkAndWriteMoneyChange()
                 transactionHistory[today] = {date = today, added = 0, removed = -difference}
             end
         end
+
         saveTransactionHistory()  -- Save transaction history on each change
-        initialMoney = currentMoney
     end
 end
 
--- Load transaction history at the beginning
-loadTransactionHistory()
-
 -- Perform initial setup
-initialMoney = getCurrentMoney()
+_, _, initialMoney = getCurrentMoney()
 
 local function transferToBank(amount)
     NET_GAMESERVER_TRANSFER_WALLET_TO_BANK(util.get_char_slot(), amount)
@@ -80,14 +90,15 @@ local function transferToWallet(amount)
 end
 
 local function autoTransfer(desiredAmount, percentThreshold)
+    if !in_session() then return end
     local currentMoney = getCurrentMoney()
     desiredAmount = tonumber(desiredAmount)
 
     if currentMoney > 2147483640 then
         util.toast("Attempting to transfer all money to bank")
-        local wallet = currentMoney
+        local wallet = NETWORK_GET_VC_WALLET_BALANCE(util.get_char_slot())
         repeat
-            wallet = getCurrentMoney()
+            wallet = NETWORK_GET_VC_WALLET_BALANCE(util.get_char_slot())
             transferToBank(wallet)
         until wallet == 0
     elseif currentMoney < desiredAmount * (1 - percentThreshold / 100) then
@@ -97,13 +108,23 @@ local function autoTransfer(desiredAmount, percentThreshold)
     end
 end
 
--- Iterate over transactionHistory
-for date, transaction in pairs(transactionHistory) do
-    local this = menu.list(transactionMenu, date)
-    menu.divider(this, date)
-    menu.readonly(this, "Money Earned", "$" .. string.formatint(transaction.added))
-    menu.readonly(this, "Money Spend", "$" .. string.formatint(transaction.removed))
-    menu.readonly(this, "Money Made", "$" .. string.formatint(transaction.added - transaction.removed))
+local function sortTransactionsByDate(history)
+    local sorted = {}
+    for date, transaction in pairs(history) do
+        table.insert(sorted, {date = date, transaction = transaction})
+    end
+    table.sort(sorted, function(a, b)
+        return b.date < a.date
+    end)
+    return sorted
+end
+
+for _, transaction in ipairs(sortTransactionsByDate(transactionHistory)) do
+    local this = menu.list(transactionMenu, transaction.date)
+    menu.divider(this, transaction.date)
+    menu.readonly(this, "Money Earned", "$" .. string.formatint(transaction.transaction.added))
+    menu.readonly(this, "Money Spend", "$" .. string.formatint(transaction.transaction.removed))
+    menu.readonly(this, "Money Made", "$" .. string.formatint(transaction.transaction.added - transaction.transaction.removed))
 end
 
 menu.divider(MazeBankMenu, "Maze Bank")
@@ -112,15 +133,17 @@ menu.readonly(MazeBankMenu, "Account ID", players.get_rockstar_id(players.user()
 menu.divider(MazeBankMenu, "Balance")
 local refWallet = menu.readonly(MazeBankMenu, "Wallet", "$")
 local refBank = menu.readonly(MazeBankMenu, "Bank", "$")
+local refTotal = menu.readonly(MazeBankMenu, "Total Balance", "$")
 menu.divider(MazeBankMenu, "Businesses")
 local refNightclub = menu.readonly(MazeBankMenu, "Nightclub", "$")
 local refArcade = menu.readonly(MazeBankMenu, "Arcade", "$")
 local refAgency = menu.readonly(MazeBankMenu, "Agency", "$")
 
 util.create_tick_handler(function()
-    local w, b = getCurrentMoney()
+    local w, b, a = getCurrentMoney()
     update_value(refWallet, "$" .. string.formatint(w))
     update_value(refBank, "$" .. string.formatint(b))
+    update_value(refTotal, "$" .. string.formatint(a))
     update_value(refNightclub, "$" .. string.formatint(SSTAT_GET_INT("CLUB_SAFE_CASH_VALUE")))
     update_value(refArcade, "$" .. string.formatint(SSTAT_GET_INT("ARCADE_SAFE_CASH_VALUE")))
     update_value(refAgency, "$" .. string.formatint(SSTAT_GET_INT("FIXER_SAFE_CASH_VALUE")))
@@ -142,5 +165,9 @@ end)
 menu.toggle_loop(MazeBankMenu, "Auto Transfer", {"auto_transfer"}, "", function()
     local percentThreshold = 10
     autoTransfer(desiredAmountInput.value, percentThreshold)
-    wait(1, "m")
+    wait()
+end)
+
+util.on_pre_stop(function()
+    saveTransactionHistory()
 end)
