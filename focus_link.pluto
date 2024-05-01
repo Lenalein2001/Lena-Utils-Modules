@@ -120,6 +120,7 @@ local function get_type()
         end
     end
 
+    --print(output)
     return output
 end
 
@@ -146,6 +147,7 @@ local function getCommandFromRef(def_value = false, allow_type = true)
                 case COMMAND_SLIDER_FLOAT -> $" [{ref.min_value / 100} to {ref.max_value / 100}]"
                 case COMMAND_LIST_SELECT -> " [Text]"
                 case 3 -> "" -- Weird Text select thing
+                case 73 -> "" -- Remove Gun list??
                 case COMMAND_FLAG_LIST_ACTION -> ""
                 case COMMAND_ACTION -> " " .. state
                 case COMMAND_LIST -> "" -- whar?
@@ -160,7 +162,6 @@ local function getCommandFromRef(def_value = false, allow_type = true)
         for i = 2, #input do
             otherInputs[i - 1] = input[i]
         end
-
         return lang.get_localised(output), table.unpack(otherInputs)
     end
 end
