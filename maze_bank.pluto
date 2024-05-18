@@ -32,14 +32,14 @@ end
 
 -- Function to get current money balances
 local function getCurrentMoney()
-    if !in_session() then return 0, 0, 0 end
+    if !inSession() then return 0, 0, 0 end
     local wallet = util.stat_get_int64(util.joaat("MP" .. char .. "_WALLET_BALANCE"))
     local bank = util.stat_get_int64(util.joaat("BANK_BALANCE"))
     return wallet, bank, wallet + bank
 end
 
 local function checkAndWriteMoneyChange()
-    if !in_session() then return end
+    if !inSession() then return end
     local _, _, currentMoney = getCurrentMoney()
 
     -- Only update initialMoney on the first run
@@ -90,7 +90,7 @@ local function transferToWallet(amount)
 end
 
 local function autoTransfer(desiredAmount, percentThreshold)
-    if !in_session() then return end
+    if !inSession() then return end
     local currentMoney = getCurrentMoney()
     desiredAmount = tonumber(desiredAmount)
 
