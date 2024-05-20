@@ -1,9 +1,5 @@
 -- Made by Lena (stand.dll). Why do I even add this?
 
-util.keep_running()
-
-local max_int = 2147483647
-
 local function streamPtfx(lib)
     if not HAS_NAMED_PTFX_ASSET_LOADED(lib) then
         REQUEST_NAMED_PTFX_ASSET(lib)
@@ -15,50 +11,42 @@ local function streamPtfx(lib)
     end
 end
 
-local function Timemulti(secs, mins)
-    secs = secs * 1000
-    mins = mins * 60 * 1000
-    local time = secs + mins
-    return time
+local function Timemulti(secs)
+    return secs * 1000
 end
 
 local function activateNitrous(vehicle, speed, duration)
     local start = util.current_time_millis()
-    SET_OVERRIDE_NITROUS_LEVEL(vehicle, true, duration, speed, max_int, false)
+    SET_OVERRIDE_NITROUS_LEVEL(vehicle, true, duration, speed, 10000, false)
     while util.current_time_millis() < start + duration do
         util.yield(10)
         if IS_CONTROL_JUST_PRESSED(0, 357) then
-            SET_OVERRIDE_NITROUS_LEVEL(vehicle, false, duration, speed, max_int, false)
+            SET_OVERRIDE_NITROUS_LEVEL(vehicle, false, duration, speed, 10000, false)
             break
         end
     end
-    SET_OVERRIDE_NITROUS_LEVEL(vehicle, false, 0, speed, max_int, false)
-    util.yield_once()
+    SET_OVERRIDE_NITROUS_LEVEL(vehicle, false, 0, speed, 10000, false)
+    util.yield()
 end
 
-local nitro = {speed = 10, dursecs = 3, durmin = 0}
+local nitro = {speed = 3, dursecs = 3}
 
-local nitroMenu = menu.list(menu.ref_by_command_name("lenavehicle"), 'Nitrous', {}, 'Add Nitrous to your vehicle with the speed and duration.')
-
+local nitroMenu = menu.list(menu.ref_by_command_name("lenavehicle"), "Nitrous", {}, "Add Nitrous to your vehicle with the speed and duration.")
 menu.attach_after(menu.ref_by_command_name("lenacountermeasures"), menu.detach(nitroMenu))
 
-nitroMenu:toggle_loop('Nitrous', {'nitro'}, 'Add Nitrous to your vehicle with the speed and duration', function ()
+menu.toggle_loop(nitroMenu, "Nitrous", {"nitro"}, "Add Nitrous to your vehicle with the speed and duration", function ()
     local curcar = entities.get_user_vehicle_as_handle()
-    nitro.duration = Timemulti(nitro.dursecs, nitro.durmin)
-    streamPtfx('veh_xs_vehicle_mods')
+    nitro.duration = Timemulti(nitro.dursecs)
+    streamPtfx("veh_xs_vehicle_mods")
     if IS_CONTROL_JUST_PRESSED(0, 357) then
         activateNitrous(curcar, nitro.speed, nitro.duration)
     end
 end)
 
-nitroMenu:slider('Boost Speed', {}, 'Adjust the Speed of the Nitrous Boost.', 1, 100, 10, 1, function(s)
+menu.slider(nitroMenu, "Boost Speed", {}, "Adjust the Speed of the Nitrous Boost.", 1, 100, nitro.speed, 1, function(s)
     nitro.speed = s / 10
 end)
 
-nitroMenu:slider('Duration in Seconds', {}, 'Adjust the Duration in Seconds.', 0, 60, 30, 1, function(s)
+menu.slider(nitroMenu, "Duration in Seconds", {}, "Adjust the Duration in Seconds.", 0, 10, nitro.dursecs, 1, function(s)
     nitro.dursecs = s
-end)
-
-nitroMenu:slider('Duration in Minutes', {}, 'Adjust the Duration in Minutes', 0, 10, 0, 1, function(s)
-    nitro.durmin = s
 end)
