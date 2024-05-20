@@ -29,7 +29,7 @@ local function activateNitrous(vehicle, speed, duration)
     util.yield()
 end
 
-local nitro = {speed = 3, dursecs = 3}
+local nitro = {speed = 2, dursecs = 3}
 
 local nitroMenu = menu.list(menu.ref_by_command_name("lenavehicle"), "Nitrous", {}, "Add Nitrous to your vehicle with the speed and duration.")
 menu.attach_after(menu.ref_by_command_name("lenacountermeasures"), menu.detach(nitroMenu))
