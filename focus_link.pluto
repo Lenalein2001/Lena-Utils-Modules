@@ -169,15 +169,14 @@ end
 local function modifyFocusLink(cmdPath)
     local parent = getFocusedCommand():getParent()
 
-    if parent != tab_root then
-
-        for players.list() as pid do
+    if parent ~= tab_root then
+        for pid in players.list() do
             local n = players.get_name(pid)
 
             if cmdPath:find(n) or (cmdPath:startswith("Online>Player History") and cmdPath:match("[%[%]]")) then
-                local from_root, until_cmd = string.partition(cmdPath, "]")
-                from_root = from_root:sub(1, from_root:rfind(">"))
-                cmdPath = $"{from_root}[Player]{until_cmd}"
+                local from_root, until_cmd = string.partition(cmdPath, "]", false)
+                from_root = from_root:sub(1, from_root:match(".*()>"))
+                cmdPath = from_root .. "[Player]" .. until_cmd
             end
         end
     end
@@ -241,7 +240,7 @@ menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
                 end
             end
         else
-            commandLink     = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. urlCommand .. ">)"
+            commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. urlCommand .. ">)"
             if otherCommands then
                 commandLink   ..= "\n - Other variants: " .. otherCommands
             end
