@@ -138,6 +138,7 @@ local function getCommandFromRef(def_value = false, allow_type = true)
         if allow_type then
             output = firstInput .. switch get_type() do
                 case CUSTOM -> " [name]"
+                case COMMAND_LIST -> "" -- whar?
                 case COMMAND_LIST_SEARCH -> " [clue]"
                 case COMMAND_INPUT -> " [input]"
                 case COMMAND_TOGGLE_NO_CORRELATION -> " [on/off]"
@@ -146,11 +147,11 @@ local function getCommandFromRef(def_value = false, allow_type = true)
                 case COMMAND_SLIDER -> $" [{ref.min_value} to {ref.max_value}]"
                 case COMMAND_SLIDER_FLOAT -> $" [{ref.min_value / 100} to {ref.max_value / 100}]"
                 case COMMAND_LIST_SELECT -> " [Text]"
+                case 2 -> $" [{ref.min_value} to {ref.max_value}]" -- setrank
                 case 3 -> "" -- Weird Text select thing
                 case 73 -> "" -- Remove Gun list??
                 case COMMAND_FLAG_LIST_ACTION -> ""
                 case COMMAND_ACTION -> " " .. state
-                case COMMAND_LIST -> "" -- whar?
                 case COMMAND_LIST_COLOUR -> "" -- color list
                 default -> " " .. firstInput .. (def_value and defaultstate or state)
             end
