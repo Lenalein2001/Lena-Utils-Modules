@@ -17,7 +17,7 @@ for _, vehicle in vehicleData do
     local reader = menu.readonly(vehRoot, "Status:", "Not Spawned")
 
     menu.toggle_loop(vehRoot, "Spawn " .. veh_name, {""}, "", function()
-        if not in_session() then
+        if not inSession() then
             return
         end
 
