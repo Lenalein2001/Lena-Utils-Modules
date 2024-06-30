@@ -8,7 +8,7 @@ local custom_types = {
     "Online>Rockstar ID Tools>Join Session By Name"
 }
 
-local linkOrder = {"forgor", "reinstall", "protn_vpn", "dns", "doh", "preview", "hotkeys", "vpn"}
+local linkOrder = {"forgor", "reinstall", "protn_vpn", "susd1", "doh", "preview", "hotkeys", "vpn"}
 
 local links = {
     -- Commands
@@ -30,10 +30,10 @@ local links = {
         des = "Will guide the user on how to download Proton VPN if they require assistance."
     },
 
-    dns = {
-        name = "Set DNS up",
-        text = "!dns",
-        des = "If the user needs help configuring their DNS with 1.1.1.1, it will provide instructions. Will configure their DNS Setting. Needs to be done by the User."
+    susd1 = {
+        name = "Sus D1",
+        text = "!susd1",
+        des = "Suspension - Excessive Regeneration (D1)"
     },
 
     doh = {
