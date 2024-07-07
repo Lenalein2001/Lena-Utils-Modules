@@ -8,7 +8,7 @@ local custom_types = {
     "Online>Rockstar ID Tools>Join Session By Name"
 }
 
-local linkOrder = {"forgor", "reinstall", "protn_vpn", "susd1", "doh", "preview", "hotkeys", "vpn"}
+local linkOrder = {"forgor", "reinstall", "susacc", "susd1", "doh", "preview", "hotkeys", "vpn"}
 
 local links = {
     -- Commands
@@ -24,16 +24,16 @@ local links = {
         des = "Which will upload a batch file with eventually useful tools."
     },
 
-    protn_vpn = {
-        name = "Setup Proton VPN",
-        text = "!vpn",
-        des = "Will guide the user on how to download Proton VPN if they require assistance."
+    susacc = {
+        name = "Suspension: Account Sharing",
+        text = "!susb4",
+        des = "The User has with no doubt shared their ID."
     },
 
     susd1 = {
-        name = "Sus D1",
+        name = "Suspension: Excessive Regeneration",
         text = "!susd1",
-        des = "Suspension - Excessive Regeneration (D1)"
+        des = "Suspension - Excessive Regeneration (D1). Often comes with Account sharing and is very lenient."
     },
 
     doh = {
