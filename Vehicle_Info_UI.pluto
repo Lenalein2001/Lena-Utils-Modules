@@ -1,0 +1,155 @@
+util.require_natives("3095a", "g")
+
+local veh = entities.get_user_vehicle_as_handle(false)
+-- Function to draw the health bar with text and triangle
+function hex_to_rgb_normalized(hex_code)
+    hex_code = string.gsub(hex_code, "#", "")
+
+    if string.len(hex_code) ~= 6 then
+        error("Invalid hex code length. Expected 6 characters, got ".. string.len(hex_code))
+    end
+
+    -- Convert each hex pair to decimal and normalize
+    local red, green, blue = string.match(hex_code, "(%w%w)(%w%w)(%w%w)")
+    red, green, blue = tonumber(red, 16) / 255.0, tonumber(green, 16) / 255.0, tonumber(blue, 16) / 255.0
+
+    -- Return table with normalized RGB values
+    return { r = red, g = green, b = blue , a = 1}
+end
+
+function drawTextWithShadow(x, y, text, alignment, scale, textColor, shadowColor = { r=0, g=0, b=0, a=1 })
+    local offsetX = 0.0005
+    local offsetY = -0.0005
+
+    local shadowX = x + offsetX
+    local shadowY = y + offsetY
+
+    -- Draw shadow
+    directx.draw_text_client(shadowX, shadowY, text, alignment, scale, shadowColor)
+
+    -- Draw main text on top
+    directx.draw_text_client(x, y, text, alignment, scale, textColor)
+end
+
+function drawMultiColorLine(x, y, width, height, color1, color2)
+    directx.draw_line(x, y, width, height, color1, color2)
+end
+
+function drawShapes(x, y, width, height, Percentage, text, hex)
+    local barWidth = width * Percentage
+    local pointX = x + barWidth
+    local pointY2 = y + height
+    local trix = x + width
+    local colorFull = hex_to_rgb_normalized(hex)
+    local colorBack = hex_to_rgb_normalized("#292728") -- Gray
+    local textColor = {r = 1, g = 1, b = 1, a = 1} -- White text color; change to Stand text color?
+    local textScale = 0.5 -- May need to change scale depending on UI elements
+
+    if !string.find(text, "Body") then
+        directx.draw_rect(x, y, width, height, colorBack) -- background
+        --directx.draw_triangle(trix, y, trix, pointY2, trix + 0.0034, y + height / 2, colorBack) --pointX needs to be changed in order for the pointy side to work or move?
+    end
+
+    local _, textHeight = directx.get_text_size(text, textScale) 
+
+    -- Draw mirrored body text below the bar
+    if string.find(text, "Body") then
+        drawTextWithShadow(pointX, y + height + textHeight, text, ALIGN_CENTRE, textScale, textColor) -- Mirrored
+    else
+        drawTextWithShadow(pointX, y - textHeight, text, ALIGN_CENTRE, textScale, textColor) -- Normal text positioning
+    end
+
+    -- filled portion of the health bar
+    directx.draw_rect(x, y, barWidth, height, colorFull)
+
+    -- Draw the "pointy" edge
+    directx.draw_triangle(pointX, y, pointX, pointY2, barWidth + 0.8032, y + height / 2, colorFull) --pointX needs to be changed in order for the pointy side to work or move?
+end
+
+function round(value)
+    local roundedValue = string.format("%.1f", value)
+    return roundedValue
+end
+-- Function to get the engine health percentage
+function getEngineHealthPercentage()
+    local minHealth = -4000
+    local maxHealth = 1000
+    local currentHealth = GET_VEHICLE_ENGINE_HEALTH(veh)
+    return math.min(1, math.max(0, (currentHealth - minHealth) / (maxHealth - minHealth))), round(currentHealth)
+end
+
+-- Function to get the body health percentage
+function getBodyHealthPercentage()
+    local maxHealth = 1000
+    local currentHealth = GET_VEHICLE_BODY_HEALTH(veh)
+    return math.min(1, math.max(0, currentHealth / maxHealth)), round(currentHealth)
+end
+
+function getSpeed()
+    local maxSpeed = (GET_VEHICLE_ESTIMATED_MAX_SPEED(veh) * 3.6) * 1.5
+    local currentSpeeed = GET_ENTITY_SPEED(veh) * 3.6
+    return math.min(1, math.max(0, currentSpeeed / maxSpeed)), round(currentSpeeed)
+end
+
+function getCounterMeasures()
+    local currentCounter = GET_VEHICLE_COUNTERMEASURE_AMMO(veh)
+    local Ctype = "NaN"
+    local maxCounter
+    local mdl = entities.get_model_hash(veh)
+
+    if DECOR_GET_INT(veh, "Player_Vehicle") != 0 and not IS_THIS_MODEL_A_CAR(mdl) or mdl == util.joaat("oppressor2") then
+        if entities.get_upgrade_value(veh, 1) == 0 or entities.get_upgrade_value(veh, 6) == 0 then
+            Ctype = "Chaff"
+            maxCounter = 10
+        elseif entities.get_upgrade_value(veh, 1) == 1 or entities.get_upgrade_value(veh, 6) == 1 then
+            Ctype = "Flares"
+            maxCounter = 20
+        end
+    else
+        return false
+    end
+
+    if Ctype != "NaN" then
+        return math.min(1, math.max(0, currentCounter / maxCounter)), currentCounter, Ctype
+    else
+        return false
+    end
+end
+
+-- Function to draw health bars
+function drawElements()
+    local barWidth = 0.1
+    local barHeight = 0.015
+    local paddingX = 0.1
+    local y = 0.8
+
+    -- Calculate positions for bars (normalized coordinates)
+    local engineBarX = 1.0 - barWidth - paddingX
+    local SpeedBarX = 1.0 - barWidth - paddingX
+
+    local engineHealthPercentage, engineCurrentHealth = getEngineHealthPercentage()
+    local bodyHealthPercentage, bodyCurrentHealth = getBodyHealthPercentage()
+    local speedPercentage, currentSpeed = getSpeed()
+    local counterPercentage, counterCurrent, Ctype = getCounterMeasures()
+    local vehmdl = util.get_label_text(GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(players.get_vehicle_model(players.user())))
+
+    -- Draw
+    drawShapes(engineBarX, y, barWidth, barHeight, engineHealthPercentage, "Engine: " .. engineCurrentHealth, "#0ce0df") -- Engine Health
+    drawShapes(engineBarX, y, barWidth, barHeight, bodyHealthPercentage, "Body: " .. bodyCurrentHealth, "#11c6cb") -- Body Health
+
+    drawShapes(SpeedBarX, y - 0.06, barWidth, barHeight + 0.01, speedPercentage, currentSpeed .. " KM/H", "79f3c5") -- Speed
+    --drawMultiColorLine(0.9, y - 0.13, SpeedBarX, y - 0.13, hex_to_rgb_normalized("#ffff1a"), hex_to_rgb_normalized("#ffff1a"))
+
+    drawTextWithShadow(0.9, y - 0.09, vehmdl, ALIGN_BOTTOM_RIGHT, 0.8, hex_to_rgb_normalized("2e9696")) -- Display name
+
+    if counterPercentage then
+        drawShapes(SpeedBarX, y - 0.14, barWidth, barHeight - 0.01, counterPercentage, counterCurrent .." ".. Ctype, "79f3c5") -- Countermeasures
+    end
+end
+
+util.create_tick_handler(function()
+    if IS_PED_IN_ANY_VEHICLE(players.user_ped(), false) and not util.is_session_transition_active() then
+        veh = entities.get_user_vehicle_as_handle(false)
+        drawElements()
+    end
+end)
