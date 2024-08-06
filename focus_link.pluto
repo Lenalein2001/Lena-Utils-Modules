@@ -63,10 +63,17 @@ local links = {
     -- Links
     vpn = {
         name = "Cloudflare VPN",
-        text = "[Cloudflare WARP](<https://one.one.one.one)",
-        des = "Cloudflare WARP VPN."
+        text = "[Cloudflare WARP](<https://one.one.one.one>)",
+        des = "Cloudflare WARP; The best and fastest free VPN."
     }
 }
+
+enum specialRefs begin
+    SPECIAL_INT_SELECT = 511,
+    SPECIAL_TEXT_SELECT = 3,
+    SPECIAL_LIST = 73,
+    SPECIAL_PROF_LIST = 70
+end
 
 local function getFocusedCommand(): ?userdata
     return menu.get_current_menu_list():getFocusPhysical()
@@ -147,9 +154,10 @@ local function getCommandFromRef(def_value = false, allow_type = true)
                 case COMMAND_SLIDER -> $" [{ref.min_value} to {ref.max_value}]"
                 case COMMAND_SLIDER_FLOAT -> $" [{ref.min_value / 100} to {ref.max_value / 100}]"
                 case COMMAND_LIST_SELECT -> " [Text]"
-                case 511 -> $" [{ref.min_value} to {ref.max_value}]" -- setrank
-                case 3 -> "" -- Weird Text select thing
-                case 73 -> "" -- Remove Gun list??
+                case SPECIAL_INT_SELECT -> $" [{ref.min_value} to {ref.max_value}]" -- setrank
+                case SPECIAL_TEXT_SELECT -> "" -- Weird Text select thing
+                case SPECIAL_LIST -> "" -- Remove Gun list??
+                case SPECIAL_PROF_LIST -> ""
                 case COMMAND_FLAG_LIST_ACTION -> ""
                 case COMMAND_ACTION -> " " .. state
                 case COMMAND_LIST_COLOUR -> "" -- color list
