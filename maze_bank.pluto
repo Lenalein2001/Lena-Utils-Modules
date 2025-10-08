@@ -152,7 +152,7 @@ util.create_tick_handler(function()
 end)
 
 menu.divider(MazeBankMenu, "ATM")
-local desiredAmountInput = menu.slider(MazeBankMenu, "Desired Amount", {"desired_amount"}, "", 0, 2147483640, 5000, 10000, function(on_change); end)
+local desiredAmountInput = menu.slider(MazeBankMenu, "Desired Amount", {"desired_amount"}, "", 0, 2147483640, 5000, 10000, function(_); end)
 
 menu.action(MazeBankMenu, "Transfer to Bank", {"transfer_to_bank"}, "", function()
     transferToBank(desiredAmountInput.value)

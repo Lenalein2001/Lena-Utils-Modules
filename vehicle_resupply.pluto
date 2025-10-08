@@ -11,7 +11,7 @@ local blips = {}
 local checkpointsTab = {}
 local radius = 10
 
-function CreateBlips(checkpoints)
+function CreateBlips()
     for checkpointsPos as pos do
         local blip = ADD_BLIP_FOR_COORD(pos.x, pos.y, pos.z)
         SET_BLIP_SPRITE(blip, "402")
@@ -25,7 +25,7 @@ function CreateBlips(checkpoints)
     blipsCreated = true
 end
 
-function CreateCheckpoints(checkpoints)
+function CreateCheckpoints()
     for checkpointsPos as element do
         local checkpoint = CREATE_CHECKPOINT(11, element.x, element.y, element.z + 1, element.x, element.y, element.z, radius, 255, 0, 128, 66, 0)
         table.insert(checkpointsTab, checkpoint)
@@ -75,8 +75,8 @@ menu.toggle_loop(root, "Resupply Checkpoints", {""}, "", function()
 
     if not blipsCreated then
         doCleanup()
-        CreateBlips(checkpoints)
-        CreateCheckpoints(checkpoints)
+        CreateBlips()
+        CreateCheckpoints()
     end
 
     closestMarker = nil
@@ -92,7 +92,6 @@ menu.toggle_loop(root, "Resupply Checkpoints", {""}, "", function()
         end
 
         if closestMarker then
-            local markerPosition = closestMarker
             if not wasInZone then
                 DRAW_SPOT_LIGHT(pos.x, pos.y, pos.z + 0.6, 0, 0, -1, 255, 0, 128, 5, 5, 0, 200, 1)
             else

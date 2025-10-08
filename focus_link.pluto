@@ -1,8 +1,5 @@
 -- Made by Lena (stand.dll). Why do I even add this?
 
--- TODO:
--- Modify command names for player history
-
 local custom_types = {
     "Vehicle>Garage>Save Vehicle",
     "Self>Appearance>Outfit>Wardrobe>Save Outfit>Save Outfit",
@@ -11,7 +8,7 @@ local custom_types = {
     "Online>Rockstar ID Tools>Join Session By Name"
 }
 
-local linkOrder = {"forgor", "reinstall", "susacc", "susd1", "doh", "preview", "hotkeys", "vpn"}
+local linkOrder = {"forgor", "reinstall", "protn_vpn", "dns", "doh", "preview", "hotkeys", "vpn"}
 
 local links = {
     -- Commands
@@ -27,16 +24,16 @@ local links = {
         des = "Which will upload a batch file with eventually useful tools."
     },
 
-    susacc = {
-        name = "Suspension: Account Sharing",
-        text = "!susb4",
-        des = "The User has with no doubt shared their ID."
+    protn_vpn = {
+        name = "Setup Proton VPN",
+        text = "!vpn",
+        des = "Will guide the user on how to download Proton VPN if they require assistance."
     },
 
-    susd1 = {
-        name = "Suspension: Excessive Regeneration",
-        text = "!susd1",
-        des = "Suspension - Excessive Regeneration (D1). Often comes with Account sharing and is very lenient."
+    dns = {
+        name = "Set DNS up",
+        text = "!dns",
+        des = "If the user needs help configuring their DNS with 1.1.1.1, it will provide instructions. Will configure their DNS Setting. Needs to be done by the User."
     },
 
     doh = {
@@ -66,56 +63,51 @@ local links = {
     -- Links
     vpn = {
         name = "Cloudflare VPN",
-        text = "[Cloudflare WARP](<https://one.one.one.one>)",
-        des = "Cloudflare WARP; The best and fastest free VPN."
+        text = "[Cloudflare WARP](<https://one.one.one.one)",
+        des = "Cloudflare WARP VPN."
     }
 }
-
-enum specialRefs begin
-    SPECIAL_INT_SELECT = 511,
-    SPECIAL_TEXT_SELECT = 3,
-    SPECIAL_LIST = 73,
-    SPECIAL_PROF_LIST = 70
-end
 
 local function getFocusedCommand(): ?userdata
     return menu.get_current_menu_list():getFocusPhysical()
 end
 
 local tab_root = menu.ref_by_path("Self"):getParent()
+local version_info = menu.get_version()
+local root_name_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Root Name")
+local address_separator_ref = menu.ref_by_path("Stand>Settings>Appearance>Address Bar>Address Separator")
 
 -- Get the path from a reference
-local function getPathFromRef(commandref: userdata): ?string
-    if !commandref:isValid() then return "" end
-    local path = lang.get_string(commandref.menu_name, "en")
-    while !commandref:equals(tab_root) do
-        commandref = commandref:getParent()
+local function getPathFromRef(ref, override_separator)
+    local path = ""
+    local separator = override_separator or address_separator_ref:getState():gsub(version_info.brand, ""):gsub("Online", "")
+    local components = {}  -- Store components in reverse order
 
-        local player_name = false
-        for players.list() as player_id do
-            if commandref.menu_name != players.get_name_with_tags(player_id) then continue end
-            player_name = true
-            break
+    while ref:isValid() and not ref:equals(tab_root) do
+        local name = ref:equals(tab_root) and (root_name_ref.value ~= 0 and root_name_ref:getState():gsub("{}", version_info.version) or "") or ref.menu_name
+        local hash = tonumber(name)
+        if hash then
+            name = lang.get_string(hash)
         end
-
-        if commandref:equals(tab_root) then break end
-
-        path = tostring((player_name or commandref:getParent():equals(menu.rbp("Online>Player History"))) and "[Player]" or lang.get_string(commandref.menu_name)).. ">" ..path
+        if #name > 0 then
+            table.insert(components, name)
+        end
+        ref = ref:getParent()
     end
-    return path
+
+    -- Reverse the order of components when constructing the path
+    for i = #components, 1, -1 do
+        path = path .. components[i] .. separator
+    end
+
+    if path == "" then
+        return nil
+    end
+
+    return path:sub(0, -(separator:len() + 1))
 end
 
-local commandrefs = {}
-function menu.rbp(path: string, tree_version: ?int = 52): ?int
-    switch commandrefs[path]?:isValid?() do
-        case nil: case false:
-            local success, output = pcall(menu.ref_by_path, path, tree_version)
-            commandrefs[path] = success and output:isValid() ? output : nil
-    end
-    return commandrefs[path] or fake_commandref
-end
-
-local function get_type(): ?int
+local function get_type()
     local ref = getFocusedCommand()
     local type = menu.get_type(ref)
     local output
@@ -133,15 +125,14 @@ local function get_type(): ?int
 end
 
 -- Get the command string from a reference
-local function getCommandFromRef(def_value: ?bool = false, allow_type: ?bool = true): ?string
+local function getCommandFromRef(def_value = false, allow_type = true)
     local ref = getFocusedCommand()
-    local cmdPath = getPathFromRef(ref)
     local input = menu.get_command_names(ref)
     local firstInput = input[1]
     local output = ""
 
     if firstInput then
-        local state, defaultstate, otherInputs = ref:getState(), ref:getDefaultState(), {}
+        local state, defaultstate = ref:getState(), ref:getDefaultState()
         output = firstInput
 
         if allow_type then
@@ -156,10 +147,9 @@ local function getCommandFromRef(def_value: ?bool = false, allow_type: ?bool = t
                 case COMMAND_SLIDER -> $" [{ref.min_value} to {ref.max_value}]"
                 case COMMAND_SLIDER_FLOAT -> $" [{ref.min_value / 100} to {ref.max_value / 100}]"
                 case COMMAND_LIST_SELECT -> " [Text]"
-                case SPECIAL_INT_SELECT -> $" [{ref.min_value} to {ref.max_value}]" -- setrank
-                case SPECIAL_TEXT_SELECT -> "" -- Weird Text select thing
-                case SPECIAL_LIST -> "" -- Remove Gun list??
-                case SPECIAL_PROF_LIST -> ""
+                case 2 -> $" [{ref.min_value} to {ref.max_value}]" -- setrank
+                case 3 -> "" -- Weird Text select thing
+                case 73 -> "" -- Remove Gun list??
                 case COMMAND_FLAG_LIST_ACTION -> ""
                 case COMMAND_ACTION -> " " .. state
                 case COMMAND_LIST_COLOUR -> "" -- color list
@@ -169,33 +159,48 @@ local function getCommandFromRef(def_value: ?bool = false, allow_type: ?bool = t
             output = firstInput -- .. " " .. state
         end
 
-        output = lang.get_localised(output)
-
+        local otherInputs = {}
         for i = 2, #input do
             otherInputs[i - 1] = input[i]
         end
-
-        for players.list() as player do
-            local name = players.get_name(player):lower()
-            output = output:gsub(name, " [Player] ")
-        end
-
-        return output, table.unpack(otherInputs)
+        return lang.get_localised(output), table.unpack(otherInputs)
     end
 end
 
-local function copyToClipboardWithHelpText(focusLink: string, commandLink: string, helpText: string)
+local function modifyFocusLink(cmdPath)
+    local parent = getFocusedCommand():getParent()
+
+    if parent ~= tab_root then
+        for pid in players.list() do
+            local n = players.get_name(pid)
+
+            if cmdPath:find(n) or (cmdPath:startswith("Online>Player History") and cmdPath:match("[%[%]]")) then
+                local from_root, until_cmd = string.partition(cmdPath, "]", false)
+                from_root = from_root:sub(1, from_root:match(".*()>"))
+                cmdPath = from_root .. "[Player]" .. until_cmd
+            end
+        end
+    end
+
+    modifiedPath = cmdPath
+
+    return modifiedPath
+end
+
+local function copyToClipboardWithHelpText(focusLink, commandLink, helpText)
     local clipboardText
 
     if commandLink or helpText != "" then
+        clipboardText = "- Focus Link: " .. focusLink
+    else
         clipboardText = focusLink
     end
 
-    if commandLink and commandLink != "" then
-        clipboardText ..= "\n\n" .. commandLink
+    if commandLink and commandLink ~= "" then
+        clipboardText ..= "\n\n- Command Link: " .. commandLink
     end
 
-    if helpText and helpText != "" then
+    if helpText and helpText ~= "" then
         clipboardText ..= "\n\n- Help Text: " .. helpText
     end
 
@@ -207,31 +212,38 @@ local support = menu.list(menu.ref_by_command_name("lenamisc"), "Support Tools",
 menu.attach_after(menu.ref_by_command_name("lenatp"), menu.detach(support))
 
 menu.action(support, "Copy Link", {"copylinks"}, "Use with Hotkeys.", function()
-    local focusLink, commandLink
+    local focusLink, commandLink, helpText
     local ref = getFocusedCommand()
-    local helpText = lang.get_string(menu.get_help_text(ref))
     local state = ref:getState()
     local command, otherCommands = getCommandFromRef()
-    local encodedPath = plutoURL.encode(getPathFromRef(ref))
-    local modifiedPath = getPathFromRef(ref)
 
-    if modifiedPath:startswith("Players") or modifiedPath:startswith("Online>Player History") then
-        focusLink = "- Path: " .. modifiedPath:gsub(">", " > ")
-    else
-        focusLink = "- Focus Link: [" .. modifiedPath:gsub(">", " > ") .. " 🡭](<https://stand.gg/focus#" .. encodedPath .. ">)"
+    if ref then
+        local encodedPath = plutoURL.encode(getPathFromRef(ref, ">"))
+        local modifiedPath = modifyFocusLink(getPathFromRef(ref, ">"))
+
+        if modifiedPath:startswith("Players") or modifiedPath:startswith("Online>Player History") then
+            focusLink = modifiedPath:gsub(">", " > ")
+        else
+            focusLink = "[" .. modifiedPath:gsub(">", " > ") .. " 🡭](<https://stand.gg/focus#" .. encodedPath .. ">)"
+        end
+
+        helpText = lang.get_string(menu.get_help_text(ref))
     end
-
-    local helpText = lang.get_string(menu.get_help_text(ref))
 
     if command then
         local urlCommand = plutoURL.encode(getCommandFromRef(false, false):gsub(state, ""))
 
-        if modifiedPath:startswith("Players") or modifiedPath:startswith("Online>Player History") then
-            commandLink = "- Command: U > " .. command .. " > Enter"
+        if modifiedPath:startswith("Players") then
+            for players.list() as p do
+                local n = players.get_name(p):lower()
+                if command:find(n) then
+                    commandLink = "U > " .. command:gsub(n, " [Player]") .. " > Enter"
+                end
+            end
         else
-            commandLink = "- Command Link: [U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. urlCommand .. ">)"
+            commandLink = "[U > " .. command:gsub("%%20", " ") .. " > Enter 🡭](<https://stand.gg/commandbox#" .. urlCommand .. ">)"
             if otherCommands then
-                commandLink ..= "\n - Other variants: " .. otherCommands
+                commandLink   ..= "\n - Other variants: " .. otherCommands
             end
         end
 
